@@ -1,0 +1,30 @@
+{
+  "collection_name": "users_face_vectors",
+  "description": "Face embedding vectors for biometric authentication",
+  "vectors": {
+    "size": 512,
+    "distance": "Cosine"
+  },
+  "payload_schema": {
+    "user_id": {
+      "type": "keyword",
+      "description": "UUID of the user in PostgreSQL wardrobe.users"
+    },
+    "name": {
+      "type": "keyword",
+      "description": "Display name of the user"
+    },
+    "email": {
+      "type": "keyword",
+      "description": "User email for lookup and audit"
+    },
+    "avatar_url": {
+      "type": "keyword",
+      "description": "MinIO or CDN URL for the user avatar"
+    }
+  },
+  "payload_indexes": [
+    { "field_name": "user_id", "field_schema": "keyword" },
+    { "field_name": "email", "field_schema": "keyword" }
+  ]
+}

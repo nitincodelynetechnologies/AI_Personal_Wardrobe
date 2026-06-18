@@ -1,0 +1,19 @@
+{
+  "name": "wardrobe-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Personal Wardrobe Platform — local-first monorepo",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
+    "db:migrate": "powershell -ExecutionPolicy Bypass -File scripts/run-postgres-migrations.ps1",
+    "db:qdrant": "powershell -ExecutionPolicy Bypass -File database/qdrant/init_users_face_vectors.ps1",
+    "setup": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){fs.copyFileSync('.env.example','.env'); console.log('Created .env');}\" && npm install --prefix frontend"
+  }
+}
