@@ -43,7 +43,7 @@ export class FaceService {
       formData.append('images', new Blob([new Uint8Array(buf)]), `face_${i}.jpg`);
     });
 
-    const response = await fetch(`${baseUrl}/embed`, {
+    const response = await fetch(`${baseUrl}/v1/face/embed`, {
       method: 'POST',
       body: formData,
     });
