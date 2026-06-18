@@ -1,26 +1,25 @@
-import {
+const {
   ConflictException,
   Injectable,
+  Inject,
   NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcryptjs';
-import { PostgresService } from '../database/postgres.service';
-import {
-  CreateUserInput,
-  PublicUser,
-  UserRecord,
-} from './interfaces/user.interface';
+} = require('@nestjs/common');
+const { ConfigService } = require('@nestjs/config');
+const bcrypt = require('bcryptjs');
+const { PostgresService } = require('../database/postgres.service');
 
 @Injectable()
-export class UsersService {
+class UsersService {
   constructor(
-    private readonly postgresService: PostgresService,
-    private readonly configService: ConfigService,
-  ) {}
+    @Inject(PostgresService) postgresService,
+    @Inject(ConfigService) configService,
+  ) {
+    this.postgresService = postgresService;
+    this.configService = configService;
+  }
 
-  async createUser(input: CreateUserInput): Promise<PublicUser> {
-    const rounds = this.configService.get<number>('auth.bcryptRounds') ?? 12;
+  async createUser(input) {
+    const rounds = this.configService.get('auth.bcryptRounds') ?? 12;
     const passwordHash = await bcrypt.hash(input.password, rounds);
 
     if (input.email) {
@@ -33,29 +32,29 @@ export class UsersService {
       if (existing) throw new ConflictException('Mobile number is already registered');
     }
 
-    const result = await this.postgresService.query<UserRecord>(
+    const result = await this.postgresService.query(
       `INSERT INTO wardrobe.users (email, mobile, password_hash, status)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, mobile, status, created_at`,
       [input.email ?? null, input.mobile ?? null, passwordHash, input.status ?? 'active'],
     );
 
-    return result.rows[0] as PublicUser;
+    return result.rows[0];
   }
 
-  async findById(id: string): Promise<PublicUser> {
-    const result = await this.postgresService.query<UserRecord>(
+  async findById(id) {
+    const result = await this.postgresService.query(
       `SELECT id, email, mobile, status, created_at
        FROM wardrobe.users WHERE id = $1 AND status <> 'deleted'`,
       [id],
     );
     const user = result.rows[0];
     if (!user) throw new NotFoundException('User not found');
-    return user as PublicUser;
+    return user;
   }
 
-  async findByEmail(email: string): Promise<UserRecord | null> {
-    const result = await this.postgresService.query<UserRecord>(
+  async findByEmail(email) {
+    const result = await this.postgresService.query(
       `SELECT id, email, mobile, password_hash, status, created_at, updated_at
        FROM wardrobe.users WHERE LOWER(email) = LOWER($1) AND status <> 'deleted'`,
       [email],
@@ -63,8 +62,8 @@ export class UsersService {
     return result.rows[0] ?? null;
   }
 
-  async findByMobile(mobile: string): Promise<UserRecord | null> {
-    const result = await this.postgresService.query<UserRecord>(
+  async findByMobile(mobile) {
+    const result = await this.postgresService.query(
       `SELECT id, email, mobile, password_hash, status, created_at, updated_at
        FROM wardrobe.users WHERE mobile = $1 AND status <> 'deleted'`,
       [mobile],
@@ -72,3 +71,5 @@ export class UsersService {
     return result.rows[0] ?? null;
   }
 }
+
+module.exports = { UsersService };

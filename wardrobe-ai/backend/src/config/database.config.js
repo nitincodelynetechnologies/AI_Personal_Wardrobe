@@ -1,16 +1,13 @@
-import { registerAs } from '@nestjs/config';
+const { registerAs } = require('@nestjs/config');
 
-function resolveEnvUrl(
-  template: string | undefined,
-  fallback: string,
-): string {
+function resolveEnvUrl(template, fallback) {
   if (template && !template.includes('${')) {
     return template;
   }
   return fallback;
 }
 
-export default registerAs('database', () => {
+module.exports = registerAs('database', () => {
   const pgHost = process.env.POSTGRES_HOST || 'localhost';
   const pgPort = process.env.POSTGRES_PORT || '5432';
   const qdrantHost = process.env.QDRANT_HOST || 'localhost';

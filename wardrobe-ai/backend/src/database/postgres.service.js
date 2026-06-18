@@ -1,20 +1,22 @@
-import {
+const {
   Injectable,
+  Inject,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Pool, QueryResult, QueryResultRow } from 'pg';
+} = require('@nestjs/common');
+const { ConfigService } = require('@nestjs/config');
+const { Pool } = require('pg');
 
 @Injectable()
-export class PostgresService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(PostgresService.name);
-  private pool: Pool | null = null;
+class PostgresService {
+  constructor(@Inject(ConfigService) configService) {
+    this.configService = configService;
+    this.logger = new Logger(PostgresService.name);
+    this.pool = null;
+  }
 
-  constructor(private readonly configService: ConfigService) {}
-
-  async onModuleInit(): Promise<void> {
+  async onModuleInit() {
     try {
       const pg = this.configService.get('database.postgres');
       this.pool = new Pool({
@@ -31,34 +33,33 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`PostgreSQL connected — ${result.rows[0].server_time}`);
     } catch (error) {
       this.logger.error(
-        `PostgreSQL unavailable — start Docker: docker compose up -d (${(error as Error).message})`,
+        `PostgreSQL unavailable — start Docker: docker compose up -d (${error.message})`,
       );
     }
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async onModuleDestroy() {
     await this.pool?.end();
     this.logger.log('PostgreSQL pool closed');
   }
 
-  getPool(): Pool {
+  getPool() {
     if (!this.pool) throw new Error('PostgreSQL pool is not initialized');
     return this.pool;
   }
 
-  async query<T extends QueryResultRow = QueryResultRow>(
-    text: string,
-    params: unknown[] = [],
-  ): Promise<QueryResult<T>> {
-    return this.getPool().query<T>(text, params);
+  async query(text, params = []) {
+    return this.getPool().query(text, params);
   }
 
-  async healthCheck(): Promise<boolean> {
+  async healthCheck() {
     try {
-      const result = await this.query<{ ok: number }>('SELECT 1 AS ok');
+      const result = await this.query('SELECT 1 AS ok');
       return result.rows[0]?.ok === 1;
     } catch {
       return false;
     }
   }
 }
+
+module.exports = { PostgresService };

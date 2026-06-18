@@ -1,11 +1,11 @@
-import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
+require('reflect-metadata');
+const { ValidationPipe } = require('@nestjs/common');
+const { NestFactory } = require('@nestjs/core');
+const { DocumentBuilder, SwaggerModule } = require('@nestjs/swagger');
+const { AppModule } = require('./app.module');
+const { DatabaseExceptionFilter } = require('./common/filters/database-exception.filter');
 
-async function bootstrap(): Promise<void> {
+async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');

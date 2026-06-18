@@ -1,6 +1,6 @@
-import { registerAs } from '@nestjs/config';
+const { registerAs } = require('@nestjs/config');
 
-export default registerAs('auth', () => ({
+module.exports = registerAs('auth', () => ({
   jwtSecret: process.env.JWT_SECRET || 'change_me_jwt_secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   faceServiceUrl: process.env.FACE_SERVICE_URL || 'http://localhost:8000',

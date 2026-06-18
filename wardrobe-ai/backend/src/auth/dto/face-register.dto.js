@@ -1,39 +1,41 @@
-import {
+const {
   IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
   ValidateIf,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+} = require('class-validator');
+const { ApiProperty, ApiPropertyOptional } = require('@nestjs/swagger');
 
-export class FaceRegisterDto {
+class FaceRegisterDto {
   @ApiProperty({ example: 'jane@example.com' })
   @IsEmail()
   @IsOptional()
-  @ValidateIf((o: FaceRegisterDto) => !o.mobile)
-  email?: string;
+  @ValidateIf((o) => !o.mobile)
+  email;
 
   @ApiPropertyOptional({ example: '+15551234567' })
   @IsString()
   @IsOptional()
-  @ValidateIf((o: FaceRegisterDto) => !o.email)
-  mobile?: string;
+  @ValidateIf((o) => !o.email)
+  mobile;
 
   @ApiProperty({ example: 'SecurePass123!', minLength: 8 })
   @IsString()
   @IsNotEmpty()
   @MinLength(8)
-  password: string;
+  password;
 
   @ApiPropertyOptional({ example: 'Jane Doe' })
   @IsString()
   @IsOptional()
-  name?: string;
+  name;
 
   @ApiPropertyOptional({ example: 'https://cdn.example.com/avatar.jpg' })
   @IsString()
   @IsOptional()
-  avatar_url?: string;
+  avatar_url;
 }
+
+module.exports = { FaceRegisterDto };

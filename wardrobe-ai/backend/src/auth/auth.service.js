@@ -1,40 +1,34 @@
-import {
+const {
   BadRequestException,
   Injectable,
+  Inject,
   Logger,
   UnauthorizedException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { QdrantService } from '../database/qdrant.service';
-import { PublicUser } from '../users/interfaces/user.interface';
-import { UsersService } from '../users/users.service';
-import { FaceRegisterDto } from './dto/face-register.dto';
-import { FaceService } from './services/face.service';
-
-export interface FaceImageFiles {
-  front?: Express.Multer.File[];
-  left?: Express.Multer.File[];
-  right?: Express.Multer.File[];
-  smile?: Express.Multer.File[];
-}
+} = require('@nestjs/common');
+const { ConfigService } = require('@nestjs/config');
+const { JwtService } = require('@nestjs/jwt');
+const { QdrantService } = require('../database/qdrant.service');
+const { UsersService } = require('../users/users.service');
+const { FaceService } = require('./services/face.service');
 
 @Injectable()
-export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
+class AuthService {
   constructor(
-    private readonly usersService: UsersService,
-    private readonly qdrantService: QdrantService,
-    private readonly faceService: FaceService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-  ) {}
+    @Inject(UsersService) usersService,
+    @Inject(QdrantService) qdrantService,
+    @Inject(FaceService) faceService,
+    @Inject(JwtService) jwtService,
+    @Inject(ConfigService) configService,
+  ) {
+    this.usersService = usersService;
+    this.qdrantService = qdrantService;
+    this.faceService = faceService;
+    this.jwtService = jwtService;
+    this.configService = configService;
+    this.logger = new Logger(AuthService.name);
+  }
 
-  async registerWithFace(
-    dto: FaceRegisterDto,
-    files: FaceImageFiles,
-  ): Promise<{ success: boolean; message: string; user: PublicUser; jwt_token: string }> {
+  async registerWithFace(dto, files) {
     this.validateRegistrationImages(files);
 
     if (!dto.email && !dto.mobile) {
@@ -48,8 +42,7 @@ export class AuthService {
       status: 'active',
     });
 
-    // Primary face vector derived from front capture (matches login embedding)
-    const frontBuffer = files.front![0].buffer;
+    const frontBuffer = files.front[0].buffer;
     const embedding = await this.faceService.generateEmbedding([frontBuffer]);
 
     await this.qdrantService.upsertFaceVector(user.id, embedding, {
@@ -71,9 +64,7 @@ export class AuthService {
     };
   }
 
-  async loginWithFace(
-    faceFile: Express.Multer.File,
-  ): Promise<{ success: boolean; jwt_token: string; user: PublicUser }> {
+  async loginWithFace(faceFile) {
     if (!faceFile?.buffer?.length) {
       throw new BadRequestException('Face image is required');
     }
@@ -86,7 +77,7 @@ export class AuthService {
     }
 
     const topMatch = matches[0];
-    const userId = topMatch.payload?.user_id as string | undefined;
+    const userId = topMatch.payload?.user_id;
 
     if (!userId) {
       throw new UnauthorizedException('Invalid face vector payload');
@@ -105,9 +96,9 @@ export class AuthService {
     return { success: true, jwt_token, user };
   }
 
-  private async signToken(user: PublicUser): Promise<string> {
-    const secret = this.configService.get<string>('auth.jwtSecret');
-    const expiresIn = this.configService.get<string>('auth.jwtExpiresIn') ?? '7d';
+  async signToken(user) {
+    const secret = this.configService.get('auth.jwtSecret');
+    const expiresIn = this.configService.get('auth.jwtExpiresIn') ?? '7d';
 
     return this.jwtService.signAsync(
       { sub: user.id, email: user.email },
@@ -115,14 +106,14 @@ export class AuthService {
     );
   }
 
-  private validateRegistrationImages(files: FaceImageFiles): void {
-    const required: (keyof FaceImageFiles)[] = ['front', 'left', 'right', 'smile'];
+  validateRegistrationImages(files) {
+    const required = ['front', 'left', 'right', 'smile'];
     const missing = required.filter((key) => !files[key]?.[0]?.buffer?.length);
 
     if (missing.length) {
-      throw new BadRequestException(
-        `Face images required: ${missing.join(', ')}`,
-      );
+      throw new BadRequestException(`Face images required: ${missing.join(', ')}`);
     }
   }
 }
+
+module.exports = { AuthService };

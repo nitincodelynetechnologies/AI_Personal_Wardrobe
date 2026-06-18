@@ -1,30 +1,27 @@
-import {
+const {
   Body,
   Controller,
+  Inject,
   Post,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
-} from '@nestjs/common';
-import {
+} = require('@nestjs/common');
+const {
   ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
-} from '@nestjs/swagger';
-import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
-import { AuthService } from './auth.service';
-import { AuthSuccessResponseDto } from './dto/auth-response.dto';
-import { FaceLoginDto } from './dto/face-login.dto';
-import { FaceRegisterDto } from './dto/face-register.dto';
+} = require('@nestjs/swagger');
+const { FileFieldsInterceptor, FileInterceptor } = require('@nestjs/platform-express');
+const { memoryStorage } = require('multer');
+const { AuthService } = require('./auth.service');
+const { AuthSuccessResponseDto } = require('./dto/auth-response.dto');
+const { FaceLoginDto } = require('./dto/face-login.dto');
+const { FaceRegisterDto } = require('./dto/face-register.dto');
 
-const imageFilter = (
-  _req: Express.Request,
-  file: Express.Multer.File,
-  cb: (error: Error | null, accept: boolean) => void,
-) => {
+const imageFilter = (_req, file, cb) => {
   if (!file.mimetype.startsWith('image/')) {
     cb(new Error('Only image files are allowed'), false);
     return;
@@ -34,8 +31,10 @@ const imageFilter = (
 
 @ApiTags('auth')
 @Controller('auth')
-export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+class AuthController {
+  constructor(@Inject(AuthService) authService) {
+    this.authService = authService;
+  }
 
   @Post('face-register')
   @ApiOperation({ summary: 'Register user with face biometrics' })
@@ -66,19 +65,14 @@ export class AuthController {
         { name: 'right', maxCount: 1 },
         { name: 'smile', maxCount: 1 },
       ],
-      { storage: memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: imageFilter },
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: 10 * 1024 * 1024 },
+        fileFilter: imageFilter,
+      },
     ),
   )
-  async faceRegister(
-    @Body() dto: FaceRegisterDto,
-    @UploadedFiles()
-    files: {
-      front?: Express.Multer.File[];
-      left?: Express.Multer.File[];
-      right?: Express.Multer.File[];
-      smile?: Express.Multer.File[];
-    },
-  ) {
+  faceRegister(@Body() dto, @UploadedFiles() files) {
     return this.authService.registerWithFace(dto, files);
   }
 
@@ -94,7 +88,9 @@ export class AuthController {
       fileFilter: imageFilter,
     }),
   )
-  async faceLogin(@UploadedFile() face: Express.Multer.File) {
+  faceLogin(@UploadedFile() face) {
     return this.authService.loginWithFace(face);
   }
 }
+
+module.exports = { AuthController };

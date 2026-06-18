@@ -1,17 +1,19 @@
-import {
+const {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
-import { DatabaseError } from 'pg';
+} = require('@nestjs/common');
+const { DatabaseError } = require('pg');
 
 @Catch(DatabaseError)
-export class DatabaseExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(DatabaseExceptionFilter.name);
+class DatabaseExceptionFilter {
+  constructor() {
+    this.logger = new Logger(DatabaseExceptionFilter.name);
+  }
 
-  catch(exception: DatabaseError, host: ArgumentsHost): void {
+  catch(exception, host) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
@@ -24,3 +26,5 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
     });
   }
 }
+
+module.exports = { DatabaseExceptionFilter };
