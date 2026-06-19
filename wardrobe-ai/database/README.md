@@ -14,22 +14,35 @@ database/
 └── migrations/        # (deprecated — use postgres/migrations/)
 ```
 
-## Phase 1 Setup
+## Setup
 
-See [docs/DATABASE.md](../docs/DATABASE.md) for the full Phase 1 guide.
+See [docs/DATABASE.md](../docs/DATABASE.md) for Phase 1, Phase 2, and Phase 3 guides.
 
 ```powershell
 .\scripts\run-postgres-migrations.ps1
-.\database\qdrant\init_users_face_vectors.ps1
+.\scripts\init-qdrant.ps1
+```
+
+Phase 2 only:
+
+```powershell
+# PostgreSQL Phase 2 tables (included in full migration run)
+.\scripts\run-postgres-migrations.ps1
+
+# Qdrant Phase 2 collections
+.\database\qdrant\init_phase2_collections.ps1
+
+# Qdrant Phase 3 collections
+.\database\qdrant\init_phase3_collections.ps1
 ```
 
 ## Services
 
 | Service    | Purpose                          | Port |
 |------------|----------------------------------|------|
-| PostgreSQL | Users, wardrobe items, metadata  | 5432 |
+| PostgreSQL | Users, profiles, Fashion DNA, clothing items | 5432 |
 | Redis      | Cache, sessions, job queues      | 6379 |
-| Qdrant     | Face vectors, style embeddings   | 6333 |
+| Qdrant     | Face, Fashion DNA, recommendations, clothing vectors | 6333 |
 | MinIO      | Images, captures, assets         | 9000 |
 
 ## Persistent Volumes

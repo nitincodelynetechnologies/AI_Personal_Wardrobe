@@ -1,36 +1,48 @@
 import { apiClient } from '@/features/auth/services/apiClient';
-import { CAPTURE_STEPS } from '@/features/auth/constants/captureSteps';
+import { BACKEND_FACE_POSE_FIELDS } from '@/features/auth/constants/captureSteps';
 
 /**
- * Submits captured face images to the AI Face Service.
- * Backend generates a 512-D vector and stores it in Qdrant (users_face_vectors).
- *
- * @param {{ captures: Record<string, Blob>, userDetails?: object, token?: string }} params
- * @returns {Promise<{ success: boolean, routingToken: string, user?: object }>}
+ * Submits a single front-face capture to the registration API.
+ * Reuses the front image for legacy pose fields expected by the backend.
  */
 export async function registerFace({ captures, userDetails = {}, token }) {
+  const frontBlob = captures?.front;
+
+  if (!frontBlob) {
+    throw new Error('Front face capture is required');
+  }
+
   const formData = new FormData();
 
-  CAPTURE_STEPS.forEach((step) => {
-    const blob = captures[step.id];
-    if (blob) {
-      formData.append(step.id, blob, `${step.id}.jpg`);
-    }
+  BACKEND_FACE_POSE_FIELDS.forEach((field) => {
+    formData.append(field, frontBlob, `${field}.jpg`);
   });
-
-  if (userDetails.fullName) {
-    formData.append('fullName', userDetails.fullName);
-  }
 
   if (userDetails.email) {
     formData.append('email', userDetails.email);
   }
 
-  formData.append('livenessVerified', 'true');
+  if (userDetails.mobile) {
+    formData.append('mobile', userDetails.mobile);
+  }
 
-  return apiClient('/auth/face/register', {
+  if (userDetails.password) {
+    formData.append('password', userDetails.password);
+  }
+
+  if (userDetails.name) {
+    formData.append('name', userDetails.name);
+  }
+
+  const data = await apiClient('/auth/face-register', {
     method: 'POST',
     body: formData,
     token,
   });
+
+  return {
+    success: data.success,
+    routingToken: data.jwt_token ?? data.routingToken ?? null,
+    user: data.user,
+  };
 }

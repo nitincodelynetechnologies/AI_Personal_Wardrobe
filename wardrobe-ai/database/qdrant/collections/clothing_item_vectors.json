@@ -1,0 +1,32 @@
+{
+  "collection_name": "clothing_item_vectors",
+  "description": "512-dimensional clothing image embeddings for similarity search and outfit matching",
+  "vectors": {
+    "size": 512,
+    "distance": "Cosine"
+  },
+  "payload_schema": {
+    "user_id": {
+      "type": "keyword",
+      "description": "UUID of the wardrobe owner in PostgreSQL wardrobe.users"
+    },
+    "clothing_id": {
+      "type": "keyword",
+      "description": "UUID of the clothing item in PostgreSQL wardrobe.clothing_items"
+    },
+    "category": {
+      "type": "keyword",
+      "description": "Clothing category (Top, Bottom, Footwear, Accessory)"
+    },
+    "color_hex": {
+      "type": "keyword",
+      "description": "Dominant color hex code (#RRGGBB)"
+    }
+  },
+  "payload_indexes": [
+    { "field_name": "user_id", "field_schema": "keyword" },
+    { "field_name": "clothing_id", "field_schema": "keyword" },
+    { "field_name": "category", "field_schema": "keyword" },
+    { "field_name": "color_hex", "field_schema": "keyword" }
+  ]
+}

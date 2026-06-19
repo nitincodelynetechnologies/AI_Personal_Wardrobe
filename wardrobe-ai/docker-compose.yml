@@ -110,6 +110,29 @@ services:
     networks:
       - wardrobe-net
 
+  face-service:
+    build:
+      context: ./ai-services/face-service
+      dockerfile: Dockerfile
+    container_name: wardrobe-face-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      FACE_MODEL_NAME: ${FACE_MODEL_NAME:-buffalo_l}
+      MAX_IMAGE_SIZE_MB: ${MAX_IMAGE_SIZE_MB:-10}
+      INSIGHTFACE_CTX_ID: ${INSIGHTFACE_CTX_ID:--1}
+    ports:
+      - '${FACE_SERVICE_PORT:-8000}:8000'
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - wardrobe-net
+
 volumes:
   postgres_data:
     name: wardrobe-postgres-data

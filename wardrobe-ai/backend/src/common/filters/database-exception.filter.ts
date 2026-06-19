@@ -15,7 +15,28 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
-    this.logger.error(`Database error [${exception.code}]: ${exception.message}`);
+    this.logger.error(
+      `Database error [${exception.code ?? 'UNKNOWN'}]: ${exception.message}`,
+      exception.stack,
+    );
+
+    if (exception.detail) {
+      this.logger.error(`PostgreSQL detail: ${exception.detail}`);
+    }
+
+    if (exception.hint) {
+      this.logger.error(`PostgreSQL hint: ${exception.hint}`);
+    }
+
+    console.error('[DatabaseExceptionFilter]', {
+      code: exception.code,
+      message: exception.message,
+      detail: exception.detail,
+      hint: exception.hint,
+      table: exception.table,
+      schema: exception.schema,
+      column: exception.column,
+    });
 
     response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
       statusCode: HttpStatus.SERVICE_UNAVAILABLE,

@@ -1,0 +1,31 @@
+{
+  "collection_name": "fashion_dna_vectors",
+  "description": "Fashion DNA similarity embeddings for style matching",
+  "vectors": {
+    "size": 512,
+    "distance": "Cosine"
+  },
+  "payload_schema": {
+    "user_id": {
+      "type": "keyword",
+      "description": "UUID of the user in PostgreSQL wardrobe.users"
+    },
+    "fashion_dna_id": {
+      "type": "keyword",
+      "description": "UUID of the row in wardrobe.fashion_dna"
+    },
+    "fashion_style": {
+      "type": "keyword",
+      "description": "Primary fashion style label"
+    },
+    "style_score": {
+      "type": "float",
+      "description": "Normalized style score from fashion_dna table"
+    }
+  },
+  "payload_indexes": [
+    { "field_name": "user_id", "field_schema": "keyword" },
+    { "field_name": "fashion_dna_id", "field_schema": "keyword" },
+    { "field_name": "fashion_style", "field_schema": "keyword" }
+  ]
+}

@@ -10,28 +10,47 @@ Vector collection initialization for the AI Personal Wardrobe Platform.
 | Distance   | Cosine                                     |
 | Purpose    | Face embeddings for biometric auth         |
 
-### Payload Schema
+## Phase 2 Collections
 
-| Field        | Type    | Description                    |
-|--------------|---------|--------------------------------|
-| `user_id`    | keyword | PostgreSQL `wardrobe.users.id` |
-| `name`       | keyword | Display name                   |
-| `email`      | keyword | User email                     |
-| `avatar_url` | keyword | Avatar object URL              |
+### `fashion_dna_vectors`
+
+| Property   | Value                                      |
+|------------|--------------------------------------------|
+| Dimensions | 512 (configurable)                         |
+| Distance   | Cosine                                     |
+| Purpose    | Fashion DNA similarity embeddings          |
+
+Payload: `user_id`, `fashion_dna_id`, `fashion_style`, `style_score`
+
+### `recommendation_vectors`
+
+| Property   | Value                                      |
+|------------|--------------------------------------------|
+| Dimensions | 512 (configurable)                         |
+| Distance   | Cosine                                     |
+| Purpose    | Outfit and item recommendation embeddings  |
+
+Payload: `user_id`, `item_id`, `category`, `source`
 
 ## Initialize
 
-**Windows:**
+**All collections (Phase 1 + Phase 2):**
 
 ```powershell
-.\database\qdrant\init_users_face_vectors.ps1
+.\scripts\init-qdrant.ps1
+```
+
+**Phase 2 only:**
+
+```powershell
+.\database\qdrant\init_phase2_collections.ps1
 ```
 
 **macOS / Linux:**
 
 ```bash
-chmod +x database/qdrant/init_users_face_vectors.sh
-./database/qdrant/init_users_face_vectors.sh
+chmod +x database/qdrant/init_phase2_collections.sh
+./database/qdrant/init_phase2_collections.sh
 ```
 
-Collection definition reference: `collections/users_face_vectors.json`
+Collection definitions: `collections/*.json`

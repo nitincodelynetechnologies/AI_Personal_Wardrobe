@@ -1,0 +1,32 @@
+{
+  "collection_name": "recommendation_vectors",
+  "description": "Recommendation embeddings for outfit and item suggestions",
+  "vectors": {
+    "size": 512,
+    "distance": "Cosine"
+  },
+  "payload_schema": {
+    "user_id": {
+      "type": "keyword",
+      "description": "UUID of the user receiving recommendations"
+    },
+    "item_id": {
+      "type": "keyword",
+      "description": "Wardrobe item or catalog item identifier"
+    },
+    "category": {
+      "type": "keyword",
+      "description": "Item category (top, bottom, footwear, accessory, outfit)"
+    },
+    "source": {
+      "type": "keyword",
+      "description": "Origin of the embedding (wardrobe, catalog, ai_generated)"
+    }
+  },
+  "payload_indexes": [
+    { "field_name": "user_id", "field_schema": "keyword" },
+    { "field_name": "item_id", "field_schema": "keyword" },
+    { "field_name": "category", "field_schema": "keyword" },
+    { "field_name": "source", "field_schema": "keyword" }
+  ]
+}

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-MIGRATIONS_DIR="$SCRIPT_DIR/../database/postgres/migrations"
+MIGRATIONS_DIR="$ROOT_DIR/database/postgres/migrations"
 
 if [ -f "$ROOT_DIR/.env" ]; then
   set -a
@@ -20,16 +20,21 @@ PGDATABASE="${POSTGRES_DB:-wardrobe_db}"
 
 export PGPASSWORD
 
-MIGRATION_FILE="$MIGRATIONS_DIR/001_create_users_table.up.sql"
+mapfile -t MIGRATION_FILES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name '*.up.sql' | sort)
 
-if [ ! -f "$MIGRATION_FILE" ]; then
-  echo "Migration file not found: $MIGRATION_FILE"
+if [ "${#MIGRATION_FILES[@]}" -eq 0 ]; then
+  echo "No migration files found in $MIGRATIONS_DIR"
   exit 1
 fi
 
-echo "Running PostgreSQL migration: 001_create_users_table"
+echo "Running PostgreSQL migrations from $MIGRATIONS_DIR"
 echo "  Host: $PGHOST:$PGPORT  Database: $PGDATABASE  User: $PGUSER"
+echo ""
 
-psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$MIGRATION_FILE"
+for migration_file in "${MIGRATION_FILES[@]}"; do
+  echo "Applying $(basename "$migration_file")..."
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$migration_file"
+  echo ""
+done
 
-echo "PostgreSQL migration complete."
+echo "All PostgreSQL migrations complete."

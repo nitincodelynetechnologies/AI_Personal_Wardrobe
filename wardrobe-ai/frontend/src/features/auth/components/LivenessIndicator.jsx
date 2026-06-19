@@ -1,101 +1,68 @@
 'use client';
 
-import { LIVENESS_CHECKS } from '@/features/auth/constants/captureSteps';
+import { LIVENESS_CHECK, MVP_LIVENESS_VERIFY_MS } from '@/features/auth/constants/captureSteps';
 import { cn } from '@/lib/utils';
-import { Eye, Move3d, Check, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, Loader2, ShieldCheck } from 'lucide-react';
 
-const CHECK_ICONS = {
-  blink: Eye,
-  headMovement: Move3d,
-};
-
-export function LivenessIndicator({
-  checks,
-  activeCheck,
-  faceError,
-  onConfirmBlink,
-}) {
+export function LivenessIndicator({ isVerified, isVerifying }) {
   return (
-    <div className="w-full space-y-3 rounded-xl border border-white/5 bg-noir-surface/60 p-4 backdrop-blur-sm">
-      <div className="flex items-center justify-between">
+    <div className="w-full shrink-0 rounded-xl border border-white/5 bg-noir-surface/60 p-3 backdrop-blur-sm sm:p-4">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-foreground">Liveness Verification</h3>
-        <span className="text-xs text-muted-foreground">Real-time</span>
+        <span className="text-xs text-muted-foreground">
+          {isVerified
+            ? 'Verified'
+            : isVerifying
+              ? `Auto-verify in ${MVP_LIVENESS_VERIFY_MS / 1000}s`
+              : 'Waiting for capture'}
+        </span>
       </div>
 
-      <div className="space-y-2">
-        {LIVENESS_CHECKS.map((check) => {
-          const Icon = CHECK_ICONS[check.id] || Eye;
-          const isComplete = checks[check.id];
-          const isActive = activeCheck === check.id && !isComplete;
+      <div
+        className={cn(
+          'mt-3 flex items-center gap-3 rounded-lg border px-3 py-2 transition-all duration-300',
+          isVerified && 'border-champagne/30 bg-champagne/5',
+          isVerifying && 'border-champagne/50 bg-champagne/10',
+          !isVerified && !isVerifying && 'border-border/50 bg-transparent',
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            isVerified && 'bg-champagne text-noir',
+            isVerifying && 'bg-champagne/20 text-champagne',
+            !isVerified && !isVerifying && 'bg-muted text-muted-foreground',
+          )}
+        >
+          {isVerified ? (
+            <Check className="h-4 w-4" aria-hidden />
+          ) : isVerifying ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <ShieldCheck className="h-4 w-4" aria-hidden />
+          )}
+        </div>
 
-          return (
-            <div
-              key={check.id}
-              className={cn(
-                'flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all duration-300',
-                isComplete && 'border-champagne/30 bg-champagne/5',
-                isActive && 'border-champagne/50 bg-champagne/10',
-                !isComplete && !isActive && 'border-border/50 bg-transparent',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                  isComplete && 'bg-champagne text-noir',
-                  isActive && 'bg-champagne/20 text-champagne',
-                  !isComplete && !isActive && 'bg-muted text-muted-foreground',
-                )}
-              >
-                {isComplete ? (
-                  <Check className="h-4 w-4" aria-hidden />
-                ) : isActive ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <Icon className="h-4 w-4" aria-hidden />
-                )}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p
-                  className={cn(
-                    'text-sm font-medium',
-                    isComplete && 'text-champagne-light',
-                    isActive && 'text-foreground',
-                    !isComplete && !isActive && 'text-muted-foreground',
-                  )}
-                >
-                  {check.label}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{check.description}</p>
-              </div>
-
-              {isActive && check.id === 'blink' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onConfirmBlink}
-                  className="shrink-0 border-champagne/40 text-xs hover:bg-champagne/10"
-                >
-                  I Blinked
-                </Button>
-              )}
-            </div>
-          );
-        })}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'text-sm font-medium',
+              isVerified && 'text-champagne-light',
+              isVerifying && 'text-foreground',
+              !isVerified && !isVerifying && 'text-muted-foreground',
+            )}
+          >
+            {LIVENESS_CHECK.label}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {isVerified
+              ? 'Verification complete'
+              : isVerifying
+                ? LIVENESS_CHECK.description
+                : 'Capture your front face to begin'}
+          </p>
+        </div>
       </div>
-
-      {faceError && (
-        <p className="text-xs text-destructive" role="alert">
-          {faceError}
-        </p>
-      )}
-
-      {!faceError && checks.blink && !checks.headMovement && (
-        <p className="text-xs text-muted-foreground">
-          Slowly turn your head left and right to verify movement.
-        </p>
-      )}
     </div>
   );
 }

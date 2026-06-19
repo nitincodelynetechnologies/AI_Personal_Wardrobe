@@ -11,11 +11,10 @@ export function useFaceRegistration() {
   const setFaceRegistrationStatus = useAuthStore((s) => s.setFaceRegistrationStatus);
 
   return useMutation({
-    mutationFn: async ({ captures, livenessVerified, singleFaceConfirmed, userDetails }) => {
+    mutationFn: async ({ captures, livenessVerified, userDetails }) => {
       const validation = validateFaceRegistration({
         captures,
         livenessVerified,
-        singleFaceConfirmed,
       });
 
       if (!validation.success) {
@@ -35,6 +34,7 @@ export function useFaceRegistration() {
     onSuccess: (data) => {
       completeFaceRegistration({
         routingToken: data.routingToken,
+        accessToken: data.routingToken,
         user: data.user,
       });
     },

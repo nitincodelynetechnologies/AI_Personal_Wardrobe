@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 
 $RootDir = Split-Path -Parent $PSScriptRoot
-$MigrationFile = Join-Path $RootDir 'database\postgres\migrations\001_create_users_table.up.sql'
+$MigrationsDir = Join-Path $RootDir 'database\postgres\migrations'
 $EnvFile = Join-Path $RootDir '.env'
 
 if (Test-Path $EnvFile) {
@@ -25,9 +25,20 @@ if (-not $pgPassword) {
 
 $env:PGPASSWORD = $pgPassword
 
-Write-Host 'Running PostgreSQL migration: 001_create_users_table'
+$migrationFiles = Get-ChildItem -Path $MigrationsDir -Filter '*.up.sql' | Sort-Object Name
+
+if ($migrationFiles.Count -eq 0) {
+    throw "No migration files found in $MigrationsDir"
+}
+
+Write-Host "Running PostgreSQL migrations from $MigrationsDir"
 Write-Host "  Host: ${pgHost}:${pgPort}  Database: $pgDb  User: $pgUser"
+Write-Host ''
 
-& psql -h $pgHost -p $pgPort -U $pgUser -d $pgDb -v ON_ERROR_STOP=1 -f $MigrationFile
+foreach ($file in $migrationFiles) {
+    Write-Host "Applying $($file.Name)..."
+    & psql -h $pgHost -p $pgPort -U $pgUser -d $pgDb -v ON_ERROR_STOP=1 -f $file.FullName
+    Write-Host ''
+}
 
-Write-Host 'PostgreSQL migration complete.'
+Write-Host 'All PostgreSQL migrations complete.'

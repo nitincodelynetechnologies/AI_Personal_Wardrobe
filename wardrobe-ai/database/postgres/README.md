@@ -8,7 +8,9 @@ Versioned schema migrations for the AI Personal Wardrobe Platform.
 postgres/
 └── migrations/
     ├── 001_create_users_table.up.sql
-    └── 001_create_users_table.down.sql
+    ├── 001_create_users_table.down.sql
+    ├── 002_create_user_profile_tables.up.sql
+    └── 002_create_user_profile_tables.down.sql
 ```
 
 ## Running Migrations
@@ -40,10 +42,48 @@ Requires `psql` CLI and a running PostgreSQL container.
 | `created_at`   | TIMESTAMPTZ  | Auto-set on insert             |
 | `updated_at`   | TIMESTAMPTZ  | Auto-updated via trigger       |
 
-At least one of `email` or `mobile` must be provided.
+## Phase 2 Tables
+
+All Phase 2 tables reference `wardrobe.users(id)` with `ON DELETE CASCADE`.
+
+### `wardrobe.user_profiles`
+
+| Column      | Type          | Notes                    |
+|-------------|---------------|--------------------------|
+| `id`        | UUID          | Primary key              |
+| `user_id`   | UUID          | Unique FK → users        |
+| `gender`    | VARCHAR(50)   |                          |
+| `age`       | SMALLINT      | 0–150                    |
+| `height`    | NUMERIC(5,2)  | Centimeters              |
+| `weight`    | NUMERIC(5,2)  | Kilograms                |
+| `body_type` | VARCHAR(50)   |                          |
+| `skin_tone` | VARCHAR(50)   |                          |
+
+### `wardrobe.user_preferences`
+
+| Column            | Type         | Notes                    |
+|-------------------|--------------|--------------------------|
+| `id`              | UUID         | Primary key              |
+| `user_id`         | UUID         | Unique FK → users        |
+| `favorite_colors` | JSONB        | Array of color labels    |
+| `favorite_brands` | JSONB        | Array of brand names     |
+| `budget_range`    | VARCHAR(50)  | e.g. low, mid, premium   |
+| `fashion_style`   | VARCHAR(100) | Primary style label      |
+
+### `wardrobe.fashion_dna`
+
+| Column            | Type          | Notes                    |
+|-------------------|---------------|--------------------------|
+| `id`              | UUID          | Primary key              |
+| `user_id`         | UUID          | Unique FK → users        |
+| `style_score`     | NUMERIC(5,2)  | 0–100                    |
+| `color_affinity`  | JSONB         | Color → score map        |
+| `brand_affinity`  | JSONB         | Brand → score map        |
+| `lifestyle_score` | NUMERIC(5,2)  | 0–100                    |
 
 ## Rollback
 
 ```bash
+psql -h localhost -U wardrobe_user -d wardrobe_db -f database/postgres/migrations/002_create_user_profile_tables.down.sql
 psql -h localhost -U wardrobe_user -d wardrobe_db -f database/postgres/migrations/001_create_users_table.down.sql
 ```

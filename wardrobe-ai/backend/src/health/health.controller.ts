@@ -19,8 +19,10 @@ export class HealthController {
       this.qdrantService.healthCheck(),
     ]);
 
-    const postgresUp = postgres.status === 'fulfilled';
-    const qdrantUp = qdrant.status === 'fulfilled';
+    const postgresUp =
+      postgres.status === 'fulfilled' && postgres.value === true && this.postgresService.isReady();
+    const qdrantUp =
+      qdrant.status === 'fulfilled' && qdrant.value === true && this.qdrantService.isReady();
 
     return {
       status: postgresUp && qdrantUp ? 'ok' : 'degraded',

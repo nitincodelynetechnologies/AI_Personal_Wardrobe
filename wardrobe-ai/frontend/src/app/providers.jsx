@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useProfileStore } from '@/features/profile/store/useProfileStore';
 
 export function Providers({ children }) {
   const [queryClient] = useState(
@@ -19,6 +20,7 @@ export function Providers({ children }) {
 
   useEffect(() => {
     useAuthStore.persist.rehydrate();
+    useProfileStore.persist.rehydrate();
   }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

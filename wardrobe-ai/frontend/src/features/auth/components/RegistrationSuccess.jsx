@@ -1,25 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Sparkles, ShieldCheck } from 'lucide-react';
 
-export function RegistrationSuccess({ onContinue }) {
+const REDIRECT_DELAY_MS = 2500;
+
+export function RegistrationSuccess({ redirectTo = '/onboarding' }) {
+  const router = useRouter();
   const [showContent, setShowContent] = useState(false);
-  const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const contentTimer = setTimeout(() => setShowContent(true), 300);
-    const buttonTimer = setTimeout(() => setShowButton(true), 900);
+    const contentTimer = setTimeout(() => setShowContent(true), 200);
+    const redirectTimer = setTimeout(() => router.push(redirectTo), REDIRECT_DELAY_MS);
+
     return () => {
       clearTimeout(contentTimer);
-      clearTimeout(buttonTimer);
+      clearTimeout(redirectTimer);
     };
-  }, []);
+  }, [router, redirectTo]);
 
   return (
-    <div className="flex min-h-[70vh] w-full flex-col items-center justify-center px-4 py-12">
-      <div className="relative mb-8">
+    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center px-4 py-10">
+      <div className="relative mb-6">
         <div
           className={cn(
             'absolute inset-0 rounded-full bg-champagne/20 blur-2xl',
@@ -29,22 +33,17 @@ export function RegistrationSuccess({ onContinue }) {
         />
         <div
           className={cn(
-            'relative flex h-28 w-28 items-center justify-center rounded-full',
+            'relative flex h-24 w-24 items-center justify-center rounded-full',
             'border-2 border-champagne bg-gradient-to-br from-champagne/20 to-champagne/5',
             'animate-success-scale',
           )}
         >
-          <ShieldCheck className="h-14 w-14 text-champagne" strokeWidth={1.5} />
+          <ShieldCheck className="h-12 w-12 text-champagne" strokeWidth={1.5} />
         </div>
 
         <Sparkles
-          className="absolute -right-2 -top-2 h-6 w-6 text-champagne-light animate-fade-up"
+          className="absolute -right-2 -top-2 h-5 w-5 text-champagne-light animate-fade-up"
           style={{ animationDelay: '0.4s' }}
-          aria-hidden
-        />
-        <Sparkles
-          className="absolute -bottom-1 -left-3 h-5 w-5 text-champagne/70 animate-fade-up"
-          style={{ animationDelay: '0.6s' }}
           aria-hidden
         />
       </div>
@@ -55,27 +54,13 @@ export function RegistrationSuccess({ onContinue }) {
           showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
         )}
       >
-        <h2 className="font-display text-3xl font-semibold text-gradient-gold sm:text-4xl">
-          Profile Secured
+        <h2 className="font-display text-2xl font-semibold text-gradient-gold sm:text-3xl">
+          Registration Complete
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Your biometric face vector has been encrypted and stored securely.
-          Welcome to your personalized AI wardrobe experience.
+          Your biometric profile is secured. Let&apos;s personalize your style next…
         </p>
       </div>
-
-      <button
-        type="button"
-        onClick={onContinue}
-        className={cn(
-          'mt-10 min-w-[200px] rounded-lg bg-primary px-8 py-3',
-          'text-sm font-medium text-primary-foreground transition-all duration-500',
-          'hover:bg-primary/90 hover:shadow-lg hover:shadow-champagne/20',
-          showButton ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
-        )}
-      >
-        Continue to Dashboard
-      </button>
     </div>
   );
 }

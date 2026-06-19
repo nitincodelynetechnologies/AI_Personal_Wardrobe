@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
   ACCEPTED_IMAGE_TYPES,
-  CAPTURE_STEPS,
+  FRONT_CAPTURE_STEP,
   MAX_IMAGE_SIZE_BYTES,
 } from '@/features/auth/constants/captureSteps';
 
@@ -17,17 +17,12 @@ const captureImageSchema = z
     'Image must be JPEG, PNG, or WebP',
   );
 
-const capturesSchema = z.object(
-  Object.fromEntries(CAPTURE_STEPS.map((step) => [step.id, captureImageSchema])),
-);
-
 export const faceRegistrationSchema = z.object({
-  captures: capturesSchema,
-  livenessVerified: z.literal(true, {
-    errorMap: () => ({ message: 'Complete all liveness checks before submitting' }),
+  captures: z.object({
+    [FRONT_CAPTURE_STEP.id]: captureImageSchema,
   }),
-  singleFaceConfirmed: z.literal(true, {
-    errorMap: () => ({ message: 'Only one face must be visible in each capture' }),
+  livenessVerified: z.literal(true, {
+    errorMap: () => ({ message: 'Complete liveness verification before submitting' }),
   }),
 });
 

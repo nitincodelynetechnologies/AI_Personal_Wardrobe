@@ -5,8 +5,10 @@ const initialState = {
   user: null,
   accessToken: null,
   routingToken: null,
+  isAuthenticated: false,
   isFaceRegistered: false,
   faceRegistrationStatus: 'idle',
+  faceLoginStatus: 'idle',
 };
 
 export const useAuthStore = create(
@@ -25,10 +27,12 @@ export const useAuthStore = create(
       setFaceRegistrationStatus: (faceRegistrationStatus) =>
         set({ faceRegistrationStatus }),
 
-      completeFaceRegistration: ({ routingToken, user }) =>
+      completeFaceRegistration: ({ routingToken, user, accessToken }) =>
         set({
           routingToken,
+          accessToken: accessToken ?? routingToken ?? null,
           user: user ?? null,
+          isAuthenticated: Boolean(accessToken ?? routingToken),
           isFaceRegistered: true,
           faceRegistrationStatus: 'success',
         }),
@@ -36,6 +40,21 @@ export const useAuthStore = create(
       resetFaceRegistration: () =>
         set({
           faceRegistrationStatus: 'idle',
+        }),
+
+      setFaceLoginStatus: (faceLoginStatus) => set({ faceLoginStatus }),
+
+      completeFaceLogin: ({ user, accessToken }) =>
+        set({
+          user: user ?? null,
+          accessToken: accessToken ?? null,
+          isAuthenticated: true,
+          faceLoginStatus: 'success',
+        }),
+
+      resetFaceLogin: () =>
+        set({
+          faceLoginStatus: 'idle',
         }),
 
       logout: () => set({ ...initialState }),
@@ -48,6 +67,7 @@ export const useAuthStore = create(
         user: state.user,
         accessToken: state.accessToken,
         routingToken: state.routingToken,
+        isAuthenticated: state.isAuthenticated,
         isFaceRegistered: state.isFaceRegistered,
       }),
     },

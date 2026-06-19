@@ -26,6 +26,7 @@ Then open **http://localhost:3003** (not port 3000 or 3002).
 |-----|------|
 | http://localhost:3003 | Home |
 | http://localhost:3003/register/face | Face registration |
+| http://localhost:3003/login/face | Face login |
 | http://localhost:3003/dashboard | Dashboard |
 
 ## Infrastructure (Docker)

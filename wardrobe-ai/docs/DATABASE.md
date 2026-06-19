@@ -1,6 +1,6 @@
-# Database — Phase 1
+# Database — Phase 1, Phase 2 & Phase 3
 
-User Management and Face Authentication database initialization.
+User Management, Face Authentication, User Profiles, Fashion DNA, and Digital Wardrobe database initialization.
 
 ## Quick Start
 
@@ -8,11 +8,11 @@ User Management and Face Authentication database initialization.
 # 1. Start infrastructure
 docker compose up -d
 
-# 2. PostgreSQL — create users table
+# 2. PostgreSQL — apply all migrations (Phase 1 + Phase 2 + Phase 3)
 .\scripts\run-postgres-migrations.ps1
 
-# 3. Qdrant — create users_face_vectors collection
-.\database\qdrant\init_users_face_vectors.ps1
+# 3. Qdrant — create all vector collections
+.\scripts\init-qdrant.ps1
 
 # 4. Start NestJS backend
 cd backend
@@ -27,15 +27,20 @@ Verify: `GET http://localhost:3001/api/health`
 | Artifact | Location |
 |----------|----------|
 | Users table migration | `database/postgres/migrations/001_create_users_table.up.sql` |
-| Migration rollback | `database/postgres/migrations/001_create_users_table.down.sql` |
-| Qdrant collection init | `database/qdrant/init_users_face_vectors.ps1` |
-| Collection schema | `database/qdrant/collections/users_face_vectors.json` |
-| PostgresService | `backend/src/database/postgres.service.js` |
-| QdrantService | `backend/src/database/qdrant.service.js` |
+| Phase 2 profile migration | `database/postgres/migrations/002_create_user_profile_tables.up.sql` |
+| Phase 3 clothing migration | `database/postgres/migrations/003_create_clothing_items_table.up.sql` |
+| Migration rollback (Phase 2) | `database/postgres/migrations/002_create_user_profile_tables.down.sql` |
+| Migration rollback (Phase 3) | `database/postgres/migrations/003_create_clothing_items_table.down.sql` |
+| Qdrant face init | `database/qdrant/init_users_face_vectors.ps1` |
+| Qdrant Phase 2 init | `database/qdrant/init_phase2_collections.ps1` |
+| Qdrant Phase 3 init | `database/qdrant/init_phase3_collections.ps1` |
+| Schema registry | `backend/src/database/schema.registry.ts` |
+| PostgresService | `backend/src/database/postgres.service.ts` |
+| QdrantService | `backend/src/database/qdrant.service.ts` |
 
 ## Schema Summary
 
-### PostgreSQL: `wardrobe.users`
+### PostgreSQL Phase 1: `wardrobe.users`
 
 ```
 id            UUID PRIMARY KEY
@@ -47,12 +52,61 @@ created_at    TIMESTAMPTZ
 updated_at    TIMESTAMPTZ     — auto-updated via trigger
 ```
 
-### Qdrant: `users_face_vectors`
+### PostgreSQL Phase 2
+
+| Table | Purpose | FK |
+|-------|---------|-----|
+| `user_profiles` | Physical attributes (gender, age, height, weight, body_type, skin_tone) | `users(id)` CASCADE |
+| `user_preferences` | favorite_colors, favorite_brands, budget_range, fashion_style | `users(id)` CASCADE |
+| `fashion_dna` | style_score, color_affinity, brand_affinity, lifestyle_score | `users(id)` CASCADE |
+
+### PostgreSQL Phase 3: `wardrobe.clothing_items`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | Auto-generated |
+| `user_id` | UUID FK | `users(id)` ON DELETE CASCADE |
+| `image_url` | TEXT | MinIO/S3 object path |
+| `category` | VARCHAR(50) | Top, Bottom, Footwear, Accessory |
+| `sub_category` | VARCHAR(100) | e.g. T-Shirt, Jeans, Sneakers |
+| `color_hex` | VARCHAR(7) | Dominant color `#RRGGBB` |
+| `season` | VARCHAR(20) | Summer, Winter, Spring, Fall, All |
+| `is_favorite` | BOOLEAN | Default `false` |
+| `created_at` / `updated_at` | TIMESTAMPTZ | Auto-managed |
+
+Indexes: `user_id`, `(user_id, category)`, partial `(user_id, is_favorite)` where favorite.
+
+### Qdrant Phase 1: `users_face_vectors`
 
 ```
 Vector:    512 dimensions, Cosine distance
 Payload:   user_id, name, email, avatar_url
-Indexes:   user_id (keyword), email (keyword), name (keyword)
+```
+
+### Qdrant Phase 2
+
+| Collection | Dimensions | Purpose |
+|------------|------------|---------|
+| `fashion_dna_vectors` | 512 | Fashion DNA similarity search |
+| `recommendation_vectors` | 512 | Recommendation embeddings |
+
+### Qdrant Phase 3: `clothing_item_vectors`
+
+```
+Vector:    512 dimensions, Cosine distance
+Payload:   user_id, clothing_id, category, color_hex
+Purpose:   Clothing image similarity search and outfit matching
+```
+
+## Environment Variables (Phase 2 & Phase 3)
+
+```env
+QDRANT_COLLECTION_FASHION_DNA=fashion_dna_vectors
+QDRANT_COLLECTION_RECOMMENDATIONS=recommendation_vectors
+QDRANT_COLLECTION_CLOTHING_ITEMS=clothing_item_vectors
+QDRANT_FASHION_DNA_VECTOR_SIZE=512
+QDRANT_RECOMMENDATION_VECTOR_SIZE=512
+QDRANT_CLOTHING_ITEM_VECTOR_SIZE=512
 ```
 
 ## Naming Conventions

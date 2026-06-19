@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+
+export const NETWORK_ERROR_MESSAGE =
+  'Unable to connect to the server. Check your network and ensure the API is running.';
 
 export class ApiError extends Error {
   constructor(message, status, data = null) {
@@ -7,6 +10,24 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
   }
+}
+
+export function getNetworkErrorMessage(error) {
+  if (!error) return NETWORK_ERROR_MESSAGE;
+
+  if (error instanceof ApiError && error.status === 0) {
+    return error.message;
+  }
+
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  if (typeof error.message === 'string' && error.message.includes('Failed to fetch')) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  return error.message || NETWORK_ERROR_MESSAGE;
 }
 
 export async function apiClient(endpoint, options = {}) {
@@ -22,11 +43,17 @@ export async function apiClient(endpoint, options = {}) {
     requestHeaders['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method,
-    headers: requestHeaders,
-    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers: requestHeaders,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    throw new ApiError(getNetworkErrorMessage(error), 0, null);
+  }
 
   const contentType = response.headers.get('content-type');
   const data = contentType?.includes('application/json')
@@ -36,7 +63,9 @@ export async function apiClient(endpoint, options = {}) {
   if (!response.ok) {
     const message =
       typeof data === 'object' && data?.message
-        ? data.message
+        ? Array.isArray(data.message)
+          ? data.message.join(', ')
+          : data.message
         : `Request failed with status ${response.status}`;
     throw new ApiError(message, response.status, data);
   }

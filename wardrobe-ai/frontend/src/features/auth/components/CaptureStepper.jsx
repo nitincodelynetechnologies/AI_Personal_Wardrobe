@@ -1,79 +1,37 @@
 'use client';
 
-import { CAPTURE_STEPS } from '@/features/auth/constants/captureSteps';
 import { cn } from '@/lib/utils';
 import { Check, User } from 'lucide-react';
+import { FRONT_CAPTURE_STEP } from '@/features/auth/constants/captureSteps';
 
-const STEP_ICONS = {
-  front: '○',
-  left: '◁',
-  right: '▷',
-  smile: '☺',
-};
-
-export function CaptureStepper({ currentStepIndex, captures }) {
-  const completedCount = Object.keys(captures).length;
+export function CaptureStepper({ captures }) {
+  const isCompleted = Boolean(captures?.front);
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-between text-xs text-muted-foreground sm:text-sm">
-        <span>Capture Progress</span>
-        <span className="font-medium text-champagne">
-          {completedCount} / {CAPTURE_STEPS.length}
-        </span>
-      </div>
-
-      <div className="relative flex w-full items-center justify-between">
-        <div
-          className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border"
-          aria-hidden
-        />
-        <div
-          className="absolute left-0 top-1/2 h-0.5 -translate-y-1/2 bg-champagne transition-all duration-500"
-          style={{
-            width: `${(completedCount / CAPTURE_STEPS.length) * 100}%`,
-          }}
-          aria-hidden
-        />
-
-        {CAPTURE_STEPS.map((step, index) => {
-          const isCompleted = Boolean(captures[step.id]);
-          const isCurrent = index === currentStepIndex && !isCompleted;
-          const isUpcoming = index > currentStepIndex;
-
-          return (
-            <div
-              key={step.id}
-              className="relative z-10 flex flex-col items-center gap-1.5"
-            >
-              <div
-                className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-medium transition-all duration-300 sm:h-10 sm:w-10 sm:text-sm',
-                  isCompleted && 'border-champagne bg-champagne text-noir',
-                  isCurrent && 'border-champagne bg-noir-elevated text-champagne scale-110 shadow-lg shadow-champagne/20',
-                  isUpcoming && 'border-border bg-noir-surface text-muted-foreground',
-                )}
-                aria-current={isCurrent ? 'step' : undefined}
-              >
-                {isCompleted ? (
-                  <Check className="h-4 w-4" aria-hidden />
-                ) : (
-                  <span aria-hidden>{STEP_ICONS[step.icon] || <User className="h-4 w-4" />}</span>
-                )}
-              </div>
-              <span
-                className={cn(
-                  'hidden text-[10px] font-medium sm:block sm:text-xs',
-                  isCurrent && 'text-champagne',
-                  isCompleted && 'text-foreground',
-                  isUpcoming && 'text-muted-foreground',
-                )}
-              >
-                {step.shortLabel}
-              </span>
-            </div>
-          );
-        })}
+    <div className="w-full rounded-xl border border-white/5 bg-noir-surface/40 p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-medium',
+              isCompleted && 'border-champagne bg-champagne text-noir',
+              !isCompleted && 'border-champagne/50 bg-noir-elevated text-champagne',
+            )}
+          >
+            {isCompleted ? (
+              <Check className="h-4 w-4" aria-hidden />
+            ) : (
+              <User className="h-4 w-4" aria-hidden />
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">{FRONT_CAPTURE_STEP.label}</p>
+            <p className="text-xs text-muted-foreground">
+              {isCompleted ? 'Capture complete' : 'Single front-facing photo required'}
+            </p>
+          </div>
+        </div>
+        <span className="text-xs font-medium text-champagne">{isCompleted ? '1 / 1' : '0 / 1'}</span>
       </div>
     </div>
   );

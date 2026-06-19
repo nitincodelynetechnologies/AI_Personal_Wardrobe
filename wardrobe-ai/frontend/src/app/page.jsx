@@ -15,9 +15,14 @@ export default function HomePage() {
           Begin by registering your face to unlock your secure biometric styling profile.
         </p>
       </div>
-      <Button asChild size="lg" className="min-w-[220px]">
-        <Link href="/register/face">Start Face Registration</Link>
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button asChild size="lg" className="min-w-[220px]">
+          <Link href="/login/face">Face Login</Link>
+        </Button>
+        <Button asChild variant="outline" size="lg" className="min-w-[220px]">
+          <Link href="/register/face">Register Face</Link>
+        </Button>
+      </div>
     </div>
   );
 }

@@ -61,7 +61,7 @@ FACE_SERVICE_MOCK=true
 QDRANT_SIMILARITY_THRESHOLD=0.75
 ```
 
-Set `FACE_SERVICE_MOCK=false` to call the real Python FastAPI service at `FACE_SERVICE_URL/embed`.
+Set `FACE_SERVICE_MOCK=false` to call the real Python FastAPI service at `FACE_SERVICE_URL/v1/face/embed`.
 
 ## Start Backend
 
