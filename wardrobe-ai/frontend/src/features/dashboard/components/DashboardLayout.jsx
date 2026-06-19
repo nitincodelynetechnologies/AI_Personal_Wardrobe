@@ -13,10 +13,11 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
+import { useWardrobeStore } from '@/features/wardrobe/store/useWardrobeStore';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard', label: 'My Wardrobe', icon: Shirt, disabled: true, badge: 'Soon' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/wardrobe', label: 'My Wardrobe', icon: Shirt },
   { href: '/dashboard', label: 'Recommendations', icon: Sparkles, disabled: true, badge: 'Soon' },
   { href: '/profile/settings', label: 'Profile', icon: Settings },
 ];
@@ -25,10 +26,12 @@ export function DashboardLayout({ children }) {
   const pathname = usePathname();
   const logout = useAuthStore((s) => s.logout);
   const resetProfile = useProfileStore((s) => s.resetProfile);
+  const resetWardrobe = useWardrobeStore((s) => s.resetWardrobe);
 
   const handleLogout = () => {
     logout();
     resetProfile();
+    resetWardrobe();
     window.location.href = '/login/face';
   };
 
@@ -43,7 +46,9 @@ export function DashboardLayout({ children }) {
         <nav className="flex-1 space-y-1 p-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const active = !item.disabled && pathname === item.href;
+            const active =
+              !item.disabled &&
+              (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
 
             return (
               <Link
@@ -82,6 +87,9 @@ export function DashboardLayout({ children }) {
             <p className="text-xs uppercase tracking-wider text-champagne">Wardrobe AI</p>
             <p className="font-display text-base font-semibold">Dashboard</p>
           </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/wardrobe">Wardrobe</Link>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/profile/settings">Profile</Link>
           </Button>

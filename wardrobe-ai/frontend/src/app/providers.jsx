@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
 
+import { Toaster } from '@/components/ui/toaster';
+
 export function Providers({ children }) {
   const [queryClient] = useState(
     () =>
@@ -23,5 +25,10 @@ export function Providers({ children }) {
     useProfileStore.persist.rehydrate();
   }, []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <Toaster />
+    </QueryClientProvider>
+  );
 }
