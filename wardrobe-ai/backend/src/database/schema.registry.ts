@@ -4,6 +4,7 @@ export const POSTGRES_TABLES = {
   USER_PREFERENCES: 'wardrobe.user_preferences',
   FASHION_DNA: 'wardrobe.fashion_dna',
   CLOTHING_ITEMS: 'wardrobe.clothing_items',
+  OUTFITS: 'wardrobe.outfits',
   SCHEMA_MIGRATIONS: 'wardrobe.schema_migrations',
 } as const;
 
@@ -14,6 +15,8 @@ export const POSTGRES_PHASE2_TABLES = [
 ] as const;
 
 export const POSTGRES_PHASE3_TABLES = [POSTGRES_TABLES.CLOTHING_ITEMS] as const;
+
+export const POSTGRES_PHASE4_TABLES = [POSTGRES_TABLES.OUTFITS] as const;
 
 export const QDRANT_COLLECTION_KEYS = {
   FACES: 'faces',

@@ -32,7 +32,7 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 1; attempt <= CONNECT_RETRIES; attempt += 1) {
       try {
-        this.client = new QdrantClient({ url, checkCompatibility: false });
+        this.client = new QdrantClient({ url });
         await this.client.getCollections();
         this.ready = true;
         await this.ensureRegisteredCollections();
@@ -176,8 +176,8 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
     await this.upsertVector(this.getFaceCollectionName(), pointId, vector, payload);
   }
 
-  async searchFaceVectors(vector: number[], limit = 1) {
-    return this.searchVectors(this.getFaceCollectionName(), vector, limit);
+  async searchFaceVectors(vector: number[], limit = 1, scoreThreshold?: number) {
+    return this.searchVectors(this.getFaceCollectionName(), vector, limit, scoreThreshold);
   }
 
   async deleteFaceByUserId(userId: string): Promise<void> {
@@ -238,6 +238,13 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
     await this.deleteByUserId(this.getClothingItemCollectionName(), userId);
   }
 
+  async deleteClothingItemVector(clothingId: string): Promise<void> {
+    await this.getClient().delete(this.getClothingItemCollectionName(), {
+      wait: true,
+      points: [clothingId],
+    });
+  }
+
   private async upsertVector(
     collectionName: string,
     pointId: string,
@@ -254,12 +261,17 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async searchVectors(collectionName: string, vector: number[], limit: number) {
+  private async searchVectors(
+    collectionName: string,
+    vector: number[],
+    limit: number,
+    scoreThreshold?: number,
+  ) {
     return this.getClient().search(collectionName, {
       vector,
       limit,
       with_payload: true,
-      score_threshold: this.getSimilarityThreshold(),
+      score_threshold: scoreThreshold ?? this.getSimilarityThreshold(),
     });
   }
 

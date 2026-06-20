@@ -7,6 +7,7 @@ Python microservices for ML/AI workloads. Each service is independently deployab
 | Service        | Port | Description                          |
 |----------------|------|--------------------------------------|
 | face-service   | 8000 | Face embedding & liveness detection  |
+| stylist-service| 8001 | Clothing analysis & outfit recommendations |
 
 ## Planned Structure
 

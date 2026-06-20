@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +12,7 @@ import { join } from 'path';
 import { POSTGRES_TABLES } from '../database/schema.registry';
 import { PostgresService } from '../database/postgres.service';
 import { QdrantService } from '../database/qdrant.service';
-import { MIME_TO_EXTENSION } from './constants/wardrobe.constants';
+import { CLOTHING_CATEGORIES, MIME_TO_EXTENSION } from './constants/wardrobe.constants';
 import { UploadClothingDto } from './dto/upload-clothing.dto';
 import { ClothingItemRecord } from './interfaces/clothing-item.interface';
 import { ClothingAiService } from './services/clothing-ai.service';
@@ -42,14 +43,23 @@ export class WardrobeService {
     this.postgresService.assertReady();
     this.qdrantService.assertReady();
 
-    const imageUrl = await this.persistImage(userId, file);
+    const { buffer: imageBuffer, mimetype } = await this.prepareImageForStorage(file);
+    const analysis = await this.clothingAiService.analyzeClothing(imageBuffer);
+    const category = this.resolveCategory(analysis.category, dto.category);
+    const colorHex = analysis.color_hex || dto.color_hex || null;
+
+    const imageUrl = await this.persistImageBuffer(userId, imageBuffer, mimetype);
     let item: ClothingItemRecord | null = null;
 
     try {
-      const embedding = await this.clothingAiService.generateEmbedding(file.buffer);
-      item = await this.insertClothingItem(userId, imageUrl, dto);
+      item = await this.insertClothingItem(userId, imageUrl, {
+        category,
+        sub_category: dto.sub_category,
+        color_hex: colorHex ?? undefined,
+        season: dto.season,
+      });
 
-      await this.qdrantService.upsertClothingItemVector(item.id, embedding, {
+      await this.qdrantService.upsertClothingItemVector(item.id, analysis.embedding, {
         user_id: userId,
         clothing_id: item.id,
         category: item.category,
@@ -76,6 +86,77 @@ export class WardrobeService {
     );
 
     return result.rows;
+  }
+
+  async deleteClothingItem(
+    userId: string,
+    itemId: string,
+  ): Promise<{ success: true; deleted_outfit_ids: string[] }> {
+    this.postgresService.assertReady();
+    this.qdrantService.assertReady();
+
+    const item = await this.getItemById(userId, itemId);
+    if (!item) {
+      throw new NotFoundException('Clothing item not found');
+    }
+
+    const orphanedOutfits = await this.postgresService.query<{ id: string }>(
+      `DELETE FROM ${POSTGRES_TABLES.OUTFITS}
+       WHERE user_id = $1
+         AND $2 IN (top_id, bottom_id, footwear_id, accessory_id)
+         AND (
+           (CASE WHEN top_id IS NOT NULL AND top_id <> $2 THEN 1 ELSE 0 END) +
+           (CASE WHEN bottom_id IS NOT NULL AND bottom_id <> $2 THEN 1 ELSE 0 END) +
+           (CASE WHEN footwear_id IS NOT NULL AND footwear_id <> $2 THEN 1 ELSE 0 END) +
+           (CASE WHEN accessory_id IS NOT NULL AND accessory_id <> $2 THEN 1 ELSE 0 END)
+         ) = 0
+       RETURNING id`,
+      [userId, itemId],
+    );
+
+    await this.postgresService.query(
+      `DELETE FROM ${POSTGRES_TABLES.CLOTHING_ITEMS} WHERE id = $1 AND user_id = $2`,
+      [itemId, userId],
+    );
+
+    await this.qdrantService.deleteClothingItemVector(itemId).catch(() => undefined);
+    await this.deleteImageFile(item.image_url);
+
+    this.logger.log(
+      `Clothing item deleted for user ${userId}: ${itemId} (orphaned outfits: ${orphanedOutfits.rows.length})`,
+    );
+
+    return {
+      success: true,
+      deleted_outfit_ids: orphanedOutfits.rows.map((row) => row.id),
+    };
+  }
+
+  private async getItemById(userId: string, itemId: string): Promise<ClothingItemRecord | null> {
+    const result = await this.postgresService.query<ClothingItemRecord>(
+      `SELECT ${CLOTHING_ITEM_COLUMNS}
+       FROM ${POSTGRES_TABLES.CLOTHING_ITEMS}
+       WHERE id = $1 AND user_id = $2`,
+      [itemId, userId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  private async deleteImageFile(imageUrl: string): Promise<void> {
+    const uploadRoot = this.configService.get<string>('wardrobe.uploadDir');
+    const relativePath = imageUrl.replace('/uploads/wardrobe/', '');
+    const absolutePath = join(uploadRoot!, ...relativePath.split('/'));
+    await unlink(absolutePath).catch(() => undefined);
+  }
+
+  private resolveCategory(aiCategory: string, fallbackCategory: string): string {
+    if (CLOTHING_CATEGORIES.includes(aiCategory as (typeof CLOTHING_CATEGORIES)[number])) {
+      return aiCategory;
+    }
+
+    this.logger.warn(`Stylist returned unsupported category "${aiCategory}", using client value`);
+    return fallbackCategory;
   }
 
   private async insertClothingItem(
@@ -106,8 +187,28 @@ export class WardrobeService {
     return row;
   }
 
-  private async persistImage(userId: string, file: Express.Multer.File): Promise<string> {
-    const extension = MIME_TO_EXTENSION[file.mimetype];
+  private async prepareImageForStorage(
+    file: Express.Multer.File,
+  ): Promise<{ buffer: Buffer; mimetype: string }> {
+    try {
+      const processed = await this.clothingAiService.removeBackground(file.buffer);
+      return { buffer: processed, mimetype: 'image/png' };
+    } catch (error) {
+      this.logger.warn(
+        `Background removal skipped, saving original image: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return { buffer: file.buffer, mimetype: file.mimetype };
+    }
+  }
+
+  private async persistImageBuffer(
+    userId: string,
+    buffer: Buffer,
+    mimetype: string,
+  ): Promise<string> {
+    const extension = MIME_TO_EXTENSION[mimetype];
     if (!extension) {
       throw new BadRequestException('Unsupported image type');
     }
@@ -118,7 +219,7 @@ export class WardrobeService {
 
     const filename = `${randomUUID()}${extension}`;
     const absolutePath = join(userDir, filename);
-    await writeFile(absolutePath, file.buffer);
+    await writeFile(absolutePath, buffer);
 
     return `/uploads/wardrobe/${userId}/${filename}`;
   }

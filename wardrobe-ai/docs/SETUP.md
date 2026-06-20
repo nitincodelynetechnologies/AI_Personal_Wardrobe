@@ -1,53 +1,86 @@
-# Local Infrastructure Setup
+# Environment Setup Guide
 
-This guide walks you through starting all local services for the AI Personal Wardrobe Platform using Docker Compose.
+Complete guide for running the AI Personal Wardrobe Platform with the unified Docker Compose stack.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Browser  →  http://localhost:3000  (Next.js frontend)    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ /api rewrites
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  wardrobe-backend :3001  (NestJS API Gateway)               │
+│    ├── postgres:5432                                        │
+│    ├── qdrant:6333                                          │
+│    ├── face-service:8000                                    │
+│    └── stylist-service:8001                                 │
+└─────────────────────────────────────────────────────────────┘
+         wardrobe-network (internal Docker bridge)
+```
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose v2)
-- 4 GB+ free RAM for all containers
-- Ports available: `5432`, `6379`, `6333`, `9000`, `9001`
+- Docker Desktop 4.x+ or Docker Engine 24+ with Compose v2
+- 8 GB+ RAM (InsightFace + rembg + MobileNetV2 models)
+- Free ports: **3000**, **3001**, **5432**, **6333**, **8000**, **8001**
 
-## 1. Configure Environment
+## 1. Environment File
 
-From the `wardrobe-ai/` root:
+From `wardrobe-ai/`:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and set secure passwords:
+**Required secrets** (change before any shared/production deployment):
 
-```env
-POSTGRES_PASSWORD=your_postgres_password
-REDIS_PASSWORD=your_redis_password
-MINIO_ROOT_PASSWORD=your_minio_password
-```
+| Variable | Purpose |
+|----------|---------|
+| `POSTGRES_PASSWORD` | PostgreSQL auth |
+| `JWT_SECRET` | JWT signing (min 32 chars) |
 
-> **Never commit `.env` to version control.** Credentials are injected at runtime — nothing is hardcoded in `docker-compose.yml`.
+### Docker vs local dev hostnames
 
-## 2. Start All Containers
+| Variable | Docker Compose (automatic) | Local npm dev |
+|----------|---------------------------|---------------|
+| `POSTGRES_HOST` | `postgres` | `localhost` |
+| `QDRANT_URL` | `http://qdrant:6333` | `http://localhost:6333` |
+| `FACE_SERVICE_URL` | `http://face-service:8000` | `http://localhost:8000` |
+| `PYTHON_STYLIST_URL` | `http://stylist-service:8001` | `http://localhost:8001` |
+| `BACKEND_API_URL` | `http://backend:3001/api` | `http://localhost:3001/api` |
 
-### Option A — Docker Compose (recommended)
+> Docker Compose injects container hostnames via `docker-compose.yml`. The `.env` file is still used for secrets and host port mappings.
+
+## 2. Start the Platform
+
+### Full stack (recommended)
 
 ```bash
-docker compose up -d
+./start-platform.sh
 ```
 
-### Option B — Helper script
+Skip DB/Qdrant init (if already initialized):
 
-**Windows (PowerShell):**
+```bash
+./start-platform.sh --no-init
+```
+
+**Windows PowerShell:**
 
 ```powershell
-.\scripts\start.ps1
+.\scripts\start-platform.ps1
 ```
 
-**macOS / Linux:**
+### Manual compose
 
 ```bash
-chmod +x scripts/*.sh
-./scripts/start.sh
+docker compose up --build -d
+docker compose ps
 ```
+
+First startup may take **5–15 minutes** while AI Docker images build and download models (InsightFace buffalo_l, U-2-Net, MobileNetV2).
 
 ## 3. Verify Services
 
@@ -55,94 +88,71 @@ chmod +x scripts/*.sh
 docker compose ps
 ```
 
-All services should show `healthy` or `running`:
+Expected containers (all healthy or running):
 
-| Container          | Endpoint                        | Purpose              |
-|--------------------|---------------------------------|----------------------|
-| wardrobe-postgres  | `localhost:5432`                | Relational database  |
-| wardrobe-redis     | `localhost:6379`                | Cache & sessions     |
-| wardrobe-qdrant    | `http://localhost:6333`         | Vector database      |
-| wardrobe-minio     | `http://localhost:9000`         | Object storage API   |
-| wardrobe-minio     | `http://localhost:9001`         | MinIO web console    |
+| Container | Health URL |
+|-----------|------------|
+| `wardrobe-frontend` | http://localhost:3000 |
+| `wardrobe-backend` | http://localhost:3001/api/health |
+| `wardrobe-postgres` | `docker exec wardrobe-postgres pg_isready -U wardrobe_user` |
+| `wardrobe-qdrant` | http://localhost:6333/readyz |
+| `wardrobe-face-service` | http://localhost:8000/health |
+| `wardrobe-stylist-service` | http://localhost:8001/health |
 
-### Health checks
+## 4. Database Initialization
 
-```bash
-# PostgreSQL
-docker exec wardrobe-postgres pg_isready -U wardrobe_user
+`start-platform.sh` runs these automatically. To run manually:
 
-# Redis
-docker exec wardrobe-redis redis-cli -a $REDIS_PASSWORD ping
-
-# Qdrant
-curl http://localhost:6333/healthz
-
-# MinIO
-curl http://localhost:9000/minio/health/live
-```
-
-## 4. Initialize Databases (Phase 1)
-
-### PostgreSQL — users table
-
-**Windows:**
-
-```powershell
-.\scripts\run-postgres-migrations.ps1
-```
-
-**macOS / Linux:**
+**PostgreSQL migrations (via Docker):**
 
 ```bash
-./scripts/run-postgres-migrations.sh
+./scripts/run-postgres-migrations-docker.sh
 ```
 
-Or via Docker (no local `psql` required):
-
-```bash
-docker exec -i wardrobe-postgres psql -U wardrobe_user -d wardrobe_db \
-  < database/postgres/migrations/001_create_users_table.up.sql
-```
-
-### Qdrant — users_face_vectors collection
-
-```powershell
-.\database\qdrant\init_users_face_vectors.ps1
-```
-
-See [DATABASE.md](DATABASE.md) for schema details.
-
-## 5. Initialize Qdrant Collections (legacy script)
-
-After containers are healthy, create vector collections:
-
-**Windows:**
-
-```powershell
-.\scripts\init-qdrant.ps1
-```
-
-**macOS / Linux:**
+**Qdrant collections:**
 
 ```bash
 ./scripts/init-qdrant.sh
 ```
 
-This creates:
+See [DATABASE.md](DATABASE.md) for schema details.
 
-- `users_face_vectors` — 512-dim face embeddings
-- `style_embeddings` — 512-dim style vectors
+## 5. Host Port Configuration
 
-## 6. Start the Frontend
+Override in `.env`:
 
-```bash
-cd frontend
-npm install
-cp ../.env.example .env.local   # or symlink
-npm run dev
+```env
+FRONTEND_PORT=3000
+API_PORT=3001          # use 5000 to expose API on host port 5000
+POSTGRES_PORT=5432
+QDRANT_PORT=6333
+FACE_SERVICE_PORT=8000
+STYLIST_SERVICE_PORT=8001
 ```
 
-Open **http://localhost:3002**
+## 6. Hybrid Local Development
+
+Run only infrastructure + AI in Docker:
+
+```bash
+docker compose up -d postgres qdrant face-service stylist-service
+```
+
+Then run apps on the host:
+
+```bash
+# Terminal 1 — API
+cd backend
+npm install
+npm run start:dev
+
+# Terminal 2 — UI
+cd frontend
+npm install
+npm run dev   # http://localhost:3003
+```
+
+Ensure `.env` uses `localhost` hostnames for this mode.
 
 ## 7. Stop Services
 
@@ -150,56 +160,60 @@ Open **http://localhost:3002**
 docker compose down
 ```
 
-Or use `scripts/stop.ps1` / `scripts/stop.sh`.
+**Wipe all data** (PostgreSQL, Qdrant, uploads):
 
-> Data is preserved in named Docker volumes. Use `docker compose down -v` only if you want to **wipe all data**.
-
-## Persistent Volumes
-
-| Volume Name              | Service    | Mount Point              |
-|--------------------------|------------|--------------------------|
-| `wardrobe-postgres-data` | PostgreSQL | `/var/lib/postgresql/data` |
-| `wardrobe-redis-data`    | Redis      | `/data`                  |
-| `wardrobe-qdrant-data`   | Qdrant     | `/qdrant/storage`        |
-| `wardrobe-minio-data`    | MinIO      | `/data`                  |
-
-## MinIO Buckets
-
-The `minio-init` service automatically creates:
-
-- `wardrobe-assets` — wardrobe images and media
-- `face-captures` — biometric capture uploads
-
-Access the console at **http://localhost:9001** using `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` from `.env`.
+```bash
+docker compose down -v
+```
 
 ## Troubleshooting
 
+### Docker not running
+
+```
+ERROR: Docker daemon is not running
+```
+
+Start Docker Desktop and retry `./start-platform.sh`.
+
 ### Port already in use
 
-Change the host port in `.env` (e.g. `POSTGRES_PORT=5433`) and restart:
+Change the conflicting port in `.env` (e.g. `API_PORT=5000`) and restart:
 
 ```bash
 docker compose down
 docker compose up -d
 ```
 
-### Containers not healthy
+### AI service unhealthy on first start
+
+AI containers need 2–3 minutes for model loading. Check logs:
 
 ```bash
-docker compose logs postgres
-docker compose logs qdrant
-docker compose logs minio
+docker compose logs face-service
+docker compose logs stylist-service
 ```
 
-### Reset all data
+### Backend cannot reach Python services
+
+Ensure all services are on `wardrobe-network`:
+
+```bash
+docker network inspect wardrobe-network
+```
+
+Internal URLs must use service names, not `localhost`.
+
+### Reset everything
 
 ```bash
 docker compose down -v
-docker compose up -d
+docker network prune -f
+./start-platform.sh
 ```
 
 ## Next Steps
 
-- Scaffold the NestJS backend in `backend/`
-- Implement the face embedding service in `ai-services/face-service/`
-- See [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+- [AUTH.md](AUTH.md) — Face login & registration
+- [STYLIST.md](STYLIST.md) — Clothing analysis & outfit AI
+- [ARCHITECTURE.md](ARCHITECTURE.md) — System design

@@ -1,12 +1,48 @@
 name: wardrobe-ai
 
+# Unified production stack — 6 core services on wardrobe-network
+# Start: ./start-platform.sh   or   docker compose up --build -d
+
+x-backend-env: &backend-env
+  NODE_ENV: ${NODE_ENV:-production}
+  API_PORT: 3001
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+  QDRANT_HOST: qdrant
+  QDRANT_PORT: 6333
+  QDRANT_URL: http://qdrant:6333
+  QDRANT_COLLECTION_FACES: ${QDRANT_COLLECTION_FACES:-users_face_vectors}
+  QDRANT_COLLECTION_FASHION_DNA: ${QDRANT_COLLECTION_FASHION_DNA:-fashion_dna_vectors}
+  QDRANT_COLLECTION_RECOMMENDATIONS: ${QDRANT_COLLECTION_RECOMMENDATIONS:-recommendation_vectors}
+  QDRANT_COLLECTION_CLOTHING_ITEMS: ${QDRANT_COLLECTION_CLOTHING_ITEMS:-clothing_item_vectors}
+  QDRANT_SIMILARITY_THRESHOLD: ${QDRANT_SIMILARITY_THRESHOLD:-0.55}
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+  BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+  FACE_SERVICE_URL: http://face-service:8000
+  FACE_SERVICE_HOST: face-service
+  FACE_SERVICE_PORT: 8000
+  FACE_SERVICE_MOCK: ${FACE_SERVICE_MOCK:-false}
+  FACE_SERVICE_TIMEOUT_MS: ${FACE_SERVICE_TIMEOUT_MS:-10000}
+  FACE_LOGIN_SIMILARITY_THRESHOLD: ${FACE_LOGIN_SIMILARITY_THRESHOLD:-0.55}
+  PYTHON_STYLIST_URL: http://stylist-service:8001
+  STYLIST_SERVICE_URL: http://stylist-service:8001
+  STYLIST_SERVICE_HOST: stylist-service
+  STYLIST_SERVICE_PORT: 8001
+  STYLIST_SERVICE_TIMEOUT_MS: ${STYLIST_SERVICE_TIMEOUT_MS:-15000}
+  STYLIST_BG_REMOVAL_TIMEOUT_MS: ${STYLIST_BG_REMOVAL_TIMEOUT_MS:-45000}
+  WARDROBE_UPLOAD_DIR: /app/uploads/wardrobe
+  WARDROBE_MAX_FILE_SIZE_MB: ${WARDROBE_MAX_FILE_SIZE_MB:-5}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: wardrobe-postgres
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -23,33 +59,12 @@ services:
       retries: 5
       start_period: 20s
     networks:
-      - wardrobe-net
-
-  redis:
-    image: redis:7-alpine
-    container_name: wardrobe-redis
-    restart: unless-stopped
-    env_file:
-      - .env
-    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
-    ports:
-      - '${REDIS_PORT:-6379}:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - wardrobe-net
+      - wardrobe-network
 
   qdrant:
     image: qdrant/qdrant:v1.12.5
     container_name: wardrobe-qdrant
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - '${QDRANT_PORT:-6333}:6333'
       - '${QDRANT_GRPC_PORT:-6334}:6334'
@@ -63,52 +78,7 @@ services:
       retries: 5
       start_period: 20s
     networks:
-      - wardrobe-net
-
-  minio:
-    image: minio/minio:latest
-    container_name: wardrobe-minio
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
-    ports:
-      - '${MINIO_PORT:-9000}:9000'
-      - '${MINIO_CONSOLE_PORT:-9001}:9001'
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-    networks:
-      - wardrobe-net
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: wardrobe-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    env_file:
-      - .env
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set wardrobe http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
-      mc mb --ignore-existing wardrobe/$${MINIO_BUCKET_WARDROBE};
-      mc mb --ignore-existing wardrobe/$${MINIO_BUCKET_FACES};
-      mc anonymous set none wardrobe/$${MINIO_BUCKET_WARDROBE};
-      mc anonymous set none wardrobe/$${MINIO_BUCKET_FACES};
-      echo 'MinIO buckets initialized';
-      exit 0;
-      "
-    networks:
-      - wardrobe-net
+      - wardrobe-network
 
   face-service:
     build:
@@ -116,8 +86,6 @@ services:
       dockerfile: Dockerfile
     container_name: wardrobe-face-service
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       FACE_MODEL_NAME: ${FACE_MODEL_NAME:-buffalo_l}
       MAX_IMAGE_SIZE_MB: ${MAX_IMAGE_SIZE_MB:-10}
@@ -131,19 +99,96 @@ services:
       retries: 5
       start_period: 120s
     networks:
-      - wardrobe-net
+      - wardrobe-network
+
+  stylist-service:
+    build:
+      context: ./ai-services/stylist-service
+      dockerfile: Dockerfile
+    container_name: wardrobe-stylist-service
+    restart: unless-stopped
+    environment:
+      STYLIST_MOCK: ${STYLIST_MOCK:-false}
+      MAX_IMAGE_SIZE_MB: ${MAX_IMAGE_SIZE_MB:-10}
+      EMBEDDING_SIZE: ${EMBEDDING_SIZE:-512}
+    ports:
+      - '${STYLIST_SERVICE_PORT:-8001}:8001'
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - wardrobe-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wardrobe-backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    ports:
+      - '${API_PORT:-3001}:3001'
+    volumes:
+      - wardrobe_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      face-service:
+        condition: service_healthy
+      stylist-service:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    networks:
+      - wardrobe-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_API_URL: http://backend:3001/api
+    container_name: wardrobe-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      BACKEND_API_URL: http://backend:3001/api
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+    ports:
+      - '${FRONTEND_PORT:-3000}:3000'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - wardrobe-network
 
 volumes:
   postgres_data:
     name: wardrobe-postgres-data
-  redis_data:
-    name: wardrobe-redis-data
   qdrant_data:
     name: wardrobe-qdrant-data
-  minio_data:
-    name: wardrobe-minio-data
+  wardrobe_uploads:
+    name: wardrobe-uploads-data
 
 networks:
-  wardrobe-net:
-    name: wardrobe-net
+  wardrobe-network:
+    name: wardrobe-network
     driver: bridge

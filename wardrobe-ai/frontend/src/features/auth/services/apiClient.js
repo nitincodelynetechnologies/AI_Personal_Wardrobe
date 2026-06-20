@@ -31,7 +31,7 @@ export function getNetworkErrorMessage(error) {
 }
 
 export async function apiClient(endpoint, options = {}) {
-  const { method = 'GET', body, headers = {}, token } = options;
+  const { method = 'GET', body, headers = {}, token, timeoutMs } = options;
 
   const requestHeaders = { ...headers };
 
@@ -43,6 +43,13 @@ export async function apiClient(endpoint, options = {}) {
     requestHeaders['Content-Type'] = 'application/json';
   }
 
+  const controller = timeoutMs ? new AbortController() : null;
+  const timeoutId =
+    controller &&
+    setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+
   let response;
 
   try {
@@ -50,9 +57,17 @@ export async function apiClient(endpoint, options = {}) {
       method,
       headers: requestHeaders,
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+      signal: controller?.signal,
     });
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError('Request timed out. Please try again.', 0, null);
+    }
     throw new ApiError(getNetworkErrorMessage(error), 0, null);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 
   const contentType = response.headers.get('content-type');

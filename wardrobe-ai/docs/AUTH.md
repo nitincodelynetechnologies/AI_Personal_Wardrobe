@@ -57,8 +57,10 @@ Face registration and face login endpoints for the AI Personal Wardrobe Platform
 JWT_SECRET=your_secret
 JWT_EXPIRES_IN=7d
 FACE_SERVICE_URL=http://localhost:8000
-FACE_SERVICE_MOCK=true
-QDRANT_SIMILARITY_THRESHOLD=0.75
+FACE_SERVICE_MOCK=false
+FACE_SERVICE_TIMEOUT_MS=15000
+QDRANT_SIMILARITY_THRESHOLD=0.55
+FACE_LOGIN_SIMILARITY_THRESHOLD=0.55
 ```
 
 Set `FACE_SERVICE_MOCK=false` to call the real Python FastAPI service at `FACE_SERVICE_URL/v1/face/embed`.

@@ -13,11 +13,13 @@ export const BACKEND_FACE_POSE_FIELDS = ['front', 'left', 'right', 'smile'];
 
 export const LIVENESS_CHECK = {
   id: 'liveness',
-  label: 'Liveness Verification',
-  description: 'Confirming you are present…',
+  label: 'Face Detection',
+  description: 'Detecting a single face in the frame…',
 };
 
-export const MVP_LIVENESS_VERIFY_MS = 1000;
+export const FACE_DETECTION_MIN_SCORE = 0.8;
+export const FACE_DETECTION_STABLE_FRAMES = 8;
+export const FACE_DETECTION_INTERVAL_MS = 120;
 
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];

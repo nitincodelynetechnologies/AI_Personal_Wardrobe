@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   UploadedFile,
   UseGuards,
@@ -70,5 +72,11 @@ export class WardrobeController {
   async getItems(@CurrentUser() user: PublicUser) {
     const items = await this.wardrobeService.getItemsByUserId(user.id);
     return { items };
+  }
+
+  @Delete('items/:id')
+  @ApiOperation({ summary: 'Delete a clothing item and clean up related outfit references' })
+  async deleteItem(@CurrentUser() user: PublicUser, @Param('id') itemId: string) {
+    return this.wardrobeService.deleteClothingItem(user.id, itemId);
   }
 }

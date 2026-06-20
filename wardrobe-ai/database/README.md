@@ -16,7 +16,7 @@ database/
 
 ## Setup
 
-See [docs/DATABASE.md](../docs/DATABASE.md) for Phase 1, Phase 2, and Phase 3 guides.
+See [docs/DATABASE.md](../docs/DATABASE.md) for Phase 1 through Phase 4 guides.
 
 ```powershell
 .\scripts\run-postgres-migrations.ps1
@@ -40,7 +40,7 @@ Phase 2 only:
 
 | Service    | Purpose                          | Port |
 |------------|----------------------------------|------|
-| PostgreSQL | Users, profiles, Fashion DNA, clothing items | 5432 |
+| PostgreSQL | Users, profiles, Fashion DNA, clothing items, outfits | 5432 |
 | Redis      | Cache, sessions, job queues      | 6379 |
 | Qdrant     | Face, Fashion DNA, recommendations, clothing vectors | 6333 |
 | MinIO      | Images, captures, assets         | 9000 |

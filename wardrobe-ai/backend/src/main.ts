@@ -13,13 +13,15 @@ async function bootstrap(): Promise<void> {
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
 
   app.setGlobalPrefix('api');
+
+  const corsOrigins = (process.env.CORS_ORIGINS ||
+    'http://localhost:3000,http://localhost:3002,http://localhost:3003,http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:3003')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: [
-      'http://localhost:3002',
-      'http://localhost:3003',
-      'http://127.0.0.1:3002',
-      'http://127.0.0.1:3003',
-    ],
+    origin: corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -33,8 +35,8 @@ async function bootstrap(): Promise<void> {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('AI Personal Wardrobe API')
-    .setDescription('Phase 1 — Face Auth | Phase 2 — Profile & Fashion DNA | Phase 3 — Digital Wardrobe')
-    .setVersion('3.0')    .addBearerAuth()
+    .setDescription('Phase 1 — Face Auth | Phase 2 — Profile & Fashion DNA | Phase 3 — Digital Wardrobe | Phase 4 — AI Outfits | Phase 5 — AI Stylist Service')
+    .setVersion('5.0')    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

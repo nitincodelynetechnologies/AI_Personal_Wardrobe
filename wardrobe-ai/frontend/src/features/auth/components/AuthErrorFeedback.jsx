@@ -8,8 +8,10 @@ import { cn } from '@/lib/utils';
 import { ApiError, getNetworkErrorMessage } from '@/features/auth/services/apiClient';
 
 const ERROR_MESSAGES = {
-  401: 'Face not recognized. Please try again or register a new profile.',
+  400: 'Face not detected. Try again.',
+  401: 'Face not matched. Please try again or sign in with email below.',
   404: 'No matching profile found. You may need to register first.',
+  503: 'AI Service Unavailable. Try again or sign in with email below.',
   default: 'Authentication failed. Please try again.',
 };
 
@@ -27,8 +29,8 @@ export function getFaceLoginErrorMessage(error) {
 
   const status = error instanceof ApiError ? error.status : error.status;
 
-  if (status === 401 || status === 404) {
-    return ERROR_MESSAGES[status];
+  if (status === 400 || status === 401 || status === 404 || status === 503) {
+    return ERROR_MESSAGES[status] || error.message || ERROR_MESSAGES.default;
   }
 
   return error.message || ERROR_MESSAGES.default;
@@ -67,8 +69,13 @@ export function AuthErrorFeedback({ error, onRetry, className }) {
           Try Again
         </Button>
         <Button asChild variant="outline" size="lg" className="gap-2">
-          <Link href="/register/face">
+          <Link href="#email-login">
             <UserPlus className="h-4 w-4" />
+            Use Email Login
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="lg" className="gap-2 text-muted-foreground">
+          <Link href="/register/face">
             Register Face
           </Link>
         </Button>

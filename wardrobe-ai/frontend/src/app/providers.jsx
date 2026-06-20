@@ -2,9 +2,9 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
-
 import { Toaster } from '@/components/ui/toaster';
 
 export function Providers({ children }) {
@@ -26,9 +26,11 @@ export function Providers({ children }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

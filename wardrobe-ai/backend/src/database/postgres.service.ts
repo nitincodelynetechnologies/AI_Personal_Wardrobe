@@ -8,7 +8,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 import { applyPendingMigrations } from './postgres-migrations.util';
-import { POSTGRES_PHASE2_TABLES, POSTGRES_PHASE3_TABLES, POSTGRES_TABLES } from './schema.registry';
+import {
+  POSTGRES_PHASE2_TABLES,
+  POSTGRES_PHASE3_TABLES,
+  POSTGRES_PHASE4_TABLES,
+  POSTGRES_TABLES,
+} from './schema.registry';
 
 const CONNECT_RETRIES = 5;
 const CONNECT_RETRY_MS = 2000;
@@ -110,7 +115,12 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async verifyRegisteredTables(): Promise<void> {
-    const requiredTables = [this.tables.USERS, ...POSTGRES_PHASE2_TABLES, ...POSTGRES_PHASE3_TABLES];
+    const requiredTables = [
+      this.tables.USERS,
+      ...POSTGRES_PHASE2_TABLES,
+      ...POSTGRES_PHASE3_TABLES,
+      ...POSTGRES_PHASE4_TABLES,
+    ];
 
     for (const table of requiredTables) {
       const result = await this.pool!.query<{ reg: string | null }>(

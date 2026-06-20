@@ -39,3 +39,17 @@ export function getTopAffinities(affinityMap = {}, limit = 4) {
 export function getPrimaryStyle(fashionDna, preferences) {
   return fashionDna?.fashion_style || preferences?.fashion_style || null;
 }
+
+export function getRecentWardrobeItems(items = [], limit = 4) {
+  return [...items]
+    .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
+    .slice(0, limit);
+}
+
+export function getLatestOutfit(outfits = []) {
+  if (!outfits.length) return null;
+
+  return [...outfits].sort(
+    (left, right) => new Date(right.created_at) - new Date(left.created_at),
+  )[0];
+}

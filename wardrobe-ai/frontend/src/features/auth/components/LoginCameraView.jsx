@@ -5,18 +5,49 @@ import { cn } from '@/lib/utils';
 import { ScanFace } from 'lucide-react';
 
 export const LoginCameraView = forwardRef(function LoginCameraView(
-  { isReady, isScanning = false, className },
+  {
+    isReady,
+    isVerified = false,
+    isLivenessPending = false,
+    isVerifying = false,
+    statusMessage,
+    className,
+  },
   ref,
 ) {
+  const showGreenBorder = isVerified || isVerifying;
+
+  const overlayTitle = isVerifying
+    ? 'Verifying Biometrics'
+    : isVerified
+      ? 'Face Aligned'
+      : isLivenessPending
+        ? 'Align Your Face'
+        : !isReady
+          ? 'Camera'
+          : 'Face Detection';
+
+  const overlayMessage = isVerifying
+    ? 'Please hold still…'
+    : !isReady
+      ? 'Starting camera…'
+      : statusMessage ||
+        (isVerified
+          ? 'Capturing and signing you in…'
+          : isLivenessPending
+            ? 'Scanning for a single face…'
+            : 'Center your face in the oval');
+
   return (
     <div
       className={cn(
-        'relative mx-auto w-full max-w-md overflow-hidden rounded-xl',
-        'border border-white/10 bg-noir shadow-lg',
+        'relative mx-auto w-full overflow-hidden',
+        'bg-card',
+        showGreenBorder && 'ring-1 ring-green-500/40',
         className,
       )}
     >
-      <div className="relative aspect-video max-h-64 w-full shrink-0">
+      <div className="relative aspect-video w-full shrink-0 sm:max-h-72">
         <video
           ref={ref}
           autoPlay
@@ -31,8 +62,21 @@ export const LoginCameraView = forwardRef(function LoginCameraView(
         />
 
         {!isReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-noir-elevated">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-champagne border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+
+        {isVerifying && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px]"
+            role="status"
+            aria-live="polite"
+            aria-label="Verifying biometrics"
+          >
+            <div className="h-11 w-11 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="mt-4 text-sm font-medium text-foreground">Verifying Biometrics…</p>
+            <p className="mt-1 text-xs text-muted-foreground">Matching your face profile</p>
           </div>
         )}
 
@@ -45,43 +89,50 @@ export const LoginCameraView = forwardRef(function LoginCameraView(
           <div className="relative h-[55%] w-[45%] max-h-32 max-w-36">
             <div
               className={cn(
-                'absolute inset-0 rounded-[50%] border-2',
-                isScanning
-                  ? 'border-champagne animate-pulse-ring shadow-lg shadow-champagne/30'
-                  : 'border-dashed border-champagne/60',
+                'absolute inset-0 rounded-[50%] border-2 transition-colors duration-500',
+                showGreenBorder
+                  ? 'border-green-500 shadow-lg shadow-green-500/20'
+                  : 'border-dashed border-primary/50 animate-pulse-ring',
               )}
               aria-hidden
             />
             <div
-              className="absolute inset-2 rounded-[50%] border border-white/10"
+              className={cn(
+                'absolute inset-2 rounded-[50%] border transition-colors duration-500',
+                showGreenBorder ? 'border-green-500/40' : 'border-border',
+              )}
               aria-hidden
             />
 
-            {isReady && !isScanning && (
+            {isReady && !showGreenBorder && !isLivenessPending && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <ScanFace className="h-8 w-8 text-champagne/40" aria-hidden />
+                <ScanFace className="h-8 w-8 text-primary/40" aria-hidden />
               </div>
             )}
           </div>
         </div>
 
-        {isReady && (
+        {isReady && !isVerifying && (
           <div
-            className="pointer-events-none absolute left-4 right-4 top-[30%] h-px animate-scan bg-gradient-to-r from-transparent via-champagne/50 to-transparent"
+            className={cn(
+              'pointer-events-none absolute left-4 right-4 top-[30%] h-px animate-scan bg-gradient-to-r from-transparent to-transparent',
+              showGreenBorder ? 'via-green-500/50' : 'via-primary/50',
+            )}
             aria-hidden
           />
         )}
 
         <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3">
           <div className="glass-panel rounded-lg px-3 py-2 text-center">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-champagne/80 sm:text-xs">
-              Face Login
+            <p
+              className={cn(
+                'text-[10px] font-medium uppercase tracking-widest sm:text-xs',
+                showGreenBorder ? 'text-green-400' : 'text-primary/80',
+              )}
+            >
+              {overlayTitle}
             </p>
-            <p className="mt-0.5 text-xs text-foreground sm:text-sm">
-              {isScanning
-                ? 'Hold still — verifying your identity…'
-                : 'Center your face in the frame and capture'}
-            </p>
+            <p className="mt-0.5 text-xs text-foreground sm:text-sm">{overlayMessage}</p>
           </div>
         </div>
       </div>

@@ -34,3 +34,5 @@ export const CLOTHING_COLOR_SWATCHES = [
 
 export const MAX_UPLOAD_SIZE_MB = 5;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const WARDROBE_GRID_IMAGE_SIZES = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw';
+export const OUTFIT_IMAGE_SIZES = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw';

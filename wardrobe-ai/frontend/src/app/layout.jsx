@@ -22,9 +22,15 @@ export const metadata = {
   description: 'Your AI-powered personal wardrobe and virtual fashion platform.',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} font-sans`}>
         <Providers>{children}</Providers>
       </body>

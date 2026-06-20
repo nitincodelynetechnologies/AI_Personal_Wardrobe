@@ -20,7 +20,8 @@ describe('WardrobeService', () => {
   };
 
   const mockClothingAiService = {
-    generateEmbedding: jest.fn(),
+    analyzeClothing: jest.fn(),
+    removeBackground: jest.fn(),
   };
 
   const mockConfigService = {

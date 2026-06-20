@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { FRONT_CAPTURE_STEP } from '@/features/auth/constants/captureSteps';
 
 export const CameraViewfinder = forwardRef(function CameraViewfinder(
-  { isReady, isVerified = false, className },
+  { isReady, isVerified = false, statusMessage, className },
   ref,
 ) {
   return (
@@ -74,9 +74,10 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
               {isVerified ? 'Face Verified' : FRONT_CAPTURE_STEP.label}
             </p>
             <p className="mt-0.5 text-xs text-foreground sm:text-sm">
-              {isVerified
-                ? 'Liveness check passed — complete registration below'
-                : FRONT_CAPTURE_STEP.instruction}
+              {statusMessage ||
+                (isVerified
+                  ? 'Face detected — tap capture when ready'
+                  : FRONT_CAPTURE_STEP.instruction)}
             </p>
           </div>
         </div>

@@ -28,3 +28,10 @@ export async function uploadWardrobeItem({ token, file, metadata }) {
     body: formData,
   });
 }
+
+export async function deleteWardrobeItem(token, itemId) {
+  return apiClient(`/wardrobe/items/${itemId}`, {
+    method: 'DELETE',
+    token,
+  });
+}

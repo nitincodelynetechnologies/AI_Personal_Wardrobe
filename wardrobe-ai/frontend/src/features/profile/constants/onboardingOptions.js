@@ -77,6 +77,11 @@ export function budgetSliderToRange(value) {
   return level?.value ?? 'mid';
 }
 
+export function budgetRangeToSlider(range) {
+  const level = BUDGET_LEVELS.find((item) => item.value === range);
+  return level?.min ?? 50;
+}
+
 export function cmToFeetInches(cm) {
   const totalInches = cm / 2.54;
   const feet = Math.floor(totalInches / 12);

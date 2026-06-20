@@ -4,6 +4,29 @@
 
 @layer base {
   :root {
+    --background: 40 20% 98%;
+    --foreground: 240 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --primary: 42 45% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 15% 94%;
+    --secondary-foreground: 240 10% 15%;
+    --muted: 40 12% 92%;
+    --muted-foreground: 240 5% 42%;
+    --accent: 42 35% 90%;
+    --accent-foreground: 42 45% 30%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 42 45% 48%;
+    --radius: 0.75rem;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+  }
+
+  .dark {
     --background: 240 6% 4%;
     --foreground: 40 20% 95%;
     --card: 240 5% 8%;
@@ -21,9 +44,6 @@
     --border: 240 4% 16%;
     --input: 240 4% 16%;
     --ring: 42 45% 58%;
-    --radius: 0.75rem;
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-sans: 'Inter', system-ui, sans-serif;
   }
 
   * {
@@ -36,6 +56,9 @@
 
   body {
     @apply min-h-screen overflow-x-hidden bg-background font-sans text-foreground antialiased;
+  }
+
+  .dark body {
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, hsl(42 45% 58% / 0.08), transparent),
       radial-gradient(ellipse 60% 40% at 100% 100%, hsl(280 40% 30% / 0.05), transparent);
@@ -43,6 +66,16 @@
 }
 
 @layer utilities {
+  .app-main {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @screen md {
+    .app-main {
+      padding-bottom: 2rem;
+    }
+  }
+
   .fashion-gradient {
     background: linear-gradient(
       135deg,
@@ -53,7 +86,7 @@
   }
 
   .glass-panel {
-    @apply border border-white/5 bg-noir-elevated/80 backdrop-blur-xl;
+    @apply border border-border bg-card/80 backdrop-blur-xl;
   }
 
   .text-gradient-gold {

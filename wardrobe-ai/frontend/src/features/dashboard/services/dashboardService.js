@@ -1,5 +1,7 @@
 import { apiClient, ApiError } from '@/features/auth/services/apiClient';
 import { getProfile } from '@/features/profile/services/profileService';
+import { fetchOutfits } from '@/features/outfits/services/outfitService';
+import { fetchWardrobeItems } from '@/features/wardrobe/services/wardrobeService';
 
 export async function getFashionDna(token) {
   try {
@@ -13,14 +15,18 @@ export async function getFashionDna(token) {
 }
 
 export async function fetchDashboardData(token) {
-  const [profileResponse, fashionDna] = await Promise.all([
+  const [profileResponse, fashionDna, wardrobeItems, outfits] = await Promise.all([
     getProfile(token),
     getFashionDna(token),
+    fetchWardrobeItems(token),
+    fetchOutfits(token),
   ]);
 
   return {
     profile: profileResponse.profile,
     preferences: profileResponse.preferences,
     fashionDna,
+    wardrobeItems,
+    outfits,
   };
 }

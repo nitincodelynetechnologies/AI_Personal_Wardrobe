@@ -1,31 +1,69 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanFace } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
 import { LoginCameraView } from '@/features/auth/components/LoginCameraView';
-import { VerificationLoader } from '@/features/auth/components/VerificationLoader';
 import { AuthErrorFeedback } from '@/features/auth/components/AuthErrorFeedback';
+import { EmailPasswordLoginForm } from '@/features/auth/components/EmailPasswordLoginForm';
 import { CameraPermissionGate } from '@/features/auth/components/PermissionDeniedFallback';
+import { useToastStore } from '@/components/ui/toaster';
 import { useCamera } from '@/features/auth/hooks/useCamera';
+import { useFaceDetection } from '@/features/auth/hooks/useFaceDetection';
 import { useFaceLogin } from '@/features/auth/hooks/useFaceLogin';
+import { getFaceLoginErrorMessage } from '@/features/auth/components/AuthErrorFeedback';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
 
+const FACE_LOGIN_TIMEOUT_MS = 10000;
+const FACE_LOGIN_WATCHDOG_MS = FACE_LOGIN_TIMEOUT_MS + 2000;
+
 export function FaceLoginPage() {
   const router = useRouter();
+  const showToast = useToastStore((s) => s.showToast);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const resetFaceLogin = useAuthStore((s) => s.resetFaceLogin);
   const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
 
   const { videoRef, permission, error, isReady, startCamera, captureFrame } = useCamera();
-  const { mutate: submitLogin, isPending, isError, error: loginError, reset } = useFaceLogin();
+  const { mutate: submitLogin, isPending, error: loginError, reset } = useFaceLogin();
 
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [fallbackError, setFallbackError] = useState(null);
+  const [loginBlocked, setLoginBlocked] = useState(false);
   const [profileHydrated, setProfileHydrated] = useState(false);
+  const autoSubmitStarted = useRef(false);
+  const lastToastMessage = useRef(null);
+
+  const isVerifyingApi = isPending || isSubmitting;
+
+  const {
+    isVerified,
+    isVerifying: isLivenessPending,
+    statusMessage,
+    modelsReady,
+    modelError,
+    resetDetection,
+  } = useFaceDetection({
+    videoRef,
+    isActive: isReady && !isVerifyingApi && !showError && !loginBlocked,
+  });
+
+  const notifyError = useCallback(
+    (err) => {
+      const message = getFaceLoginErrorMessage(err);
+      setShowError(true);
+      setLoginBlocked(true);
+      resetDetection();
+
+      if (lastToastMessage.current !== message) {
+        lastToastMessage.current = message;
+        showToast({ message, variant: 'destructive' });
+      }
+    },
+    [resetDetection, showToast],
+  );
 
   useEffect(() => {
     useProfileStore.persist.rehydrate();
@@ -38,89 +76,146 @@ export function FaceLoginPage() {
   }, [isAuthenticated, onboardingComplete, profileHydrated, router]);
 
   useEffect(() => {
-    if (isError) {
-      setShowError(true);
+    if (!isVerifyingApi) return undefined;
+
+    const watchdog = setTimeout(() => {
+      setIsSubmitting(false);
+      autoSubmitStarted.current = true;
+      setFallbackError(new Error('Request timed out. Please try again.'));
+      notifyError(new Error('Request timed out. Please try again.'));
+      reset();
+      resetFaceLogin();
+    }, FACE_LOGIN_WATCHDOG_MS);
+
+    return () => clearTimeout(watchdog);
+  }, [isVerifyingApi, reset, resetFaceLogin, notifyError]);
+
+  const performLogin = useCallback(async () => {
+    if (!isVerified || loginBlocked) {
+      return;
     }
-  }, [isError]);
 
-  const handleCaptureAndLogin = useCallback(async () => {
-    setShowError(false);
-    reset();
-    resetFaceLogin();
+    setIsSubmitting(true);
 
-    setIsCapturing(true);
     const blob = await captureFrame();
-    setIsCapturing(false);
-
-    if (!blob) return;
+    if (!blob) {
+      setIsSubmitting(false);
+      autoSubmitStarted.current = false;
+      return;
+    }
 
     submitLogin(blob, {
       onSuccess: () => {
         router.push(onboardingComplete ? '/dashboard' : '/onboarding');
       },
-      onError: () => {
-        setShowError(true);
+      onError: (submitErr) => {
+        autoSubmitStarted.current = true;
+        notifyError(submitErr);
+      },
+      onSettled: (_data, submitErr) => {
+        setIsSubmitting(false);
+        if (!submitErr) {
+          autoSubmitStarted.current = false;
+        }
       },
     });
-  }, [captureFrame, submitLogin, reset, resetFaceLogin, router, onboardingComplete]);
+  }, [
+    isVerified,
+    loginBlocked,
+    captureFrame,
+    submitLogin,
+    router,
+    onboardingComplete,
+    notifyError,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isVerified ||
+      !modelsReady ||
+      loginBlocked ||
+      showError ||
+      autoSubmitStarted.current ||
+      isVerifyingApi
+    ) {
+      return;
+    }
+
+    autoSubmitStarted.current = true;
+    performLogin();
+  }, [isVerified, modelsReady, loginBlocked, showError, isVerifyingApi, performLogin]);
 
   const handleRetry = useCallback(() => {
     setShowError(false);
+    setFallbackError(null);
+    setLoginBlocked(false);
+    setIsSubmitting(false);
+    autoSubmitStarted.current = false;
+    lastToastMessage.current = null;
     reset();
     resetFaceLogin();
-  }, [reset, resetFaceLogin]);
+    resetDetection();
+  }, [reset, resetFaceLogin, resetDetection]);
 
-  if (isPending) {
-    return <VerificationLoader message="Matching your biometric profile…" />;
-  }
+  const activeError = loginError || fallbackError;
 
-  if (showError && loginError) {
-    return (
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-3xl items-center overflow-y-auto px-4 py-8">
-        <AuthErrorFeedback error={loginError} onRetry={handleRetry} />
-      </div>
-    );
-  }
+  const cameraStatusMessage =
+    isReady && !modelError ? statusMessage : modelError || undefined;
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col overflow-y-auto overflow-x-hidden px-4 py-4 sm:py-6">
-      <header className="shrink-0 space-y-2 pb-4 text-center animate-fade-up">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-champagne">
-          Secure Access
-        </p>
+    <div className="mx-auto w-full max-w-lg space-y-6">
+      <header className="space-y-2 text-center animate-fade-up">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Secure Access</p>
         <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
           Face Login
         </h1>
-        <p className="mx-auto max-w-lg text-sm text-muted-foreground">
-          Sign in instantly with your registered biometric profile.
+        <p className="text-sm text-muted-foreground">
+          Center exactly one face in the oval. When the border turns green, we sign you in
+          automatically.
         </p>
       </header>
 
-      <CameraPermissionGate
-        permission={permission}
-        error={error}
-        isReady={isReady}
-        onRequest={startCamera}
-      >
-        <div className="flex flex-col gap-4 pb-6">
-          <LoginCameraView ref={videoRef} isReady={isReady} isScanning={isCapturing} />
+      <Card className="overflow-hidden border-border shadow-md">
+        <CardContent className="p-0">
+          <CameraPermissionGate
+            purpose="login"
+            permission={permission}
+            error={error}
+            isReady={isReady}
+            onRequest={startCamera}
+          >
+            <div className="flex flex-col gap-4">
+              <LoginCameraView
+                ref={videoRef}
+                isReady={isReady}
+                isVerified={isVerified && !loginBlocked}
+                isLivenessPending={isLivenessPending && !loginBlocked}
+                isVerifying={isVerifyingApi}
+                statusMessage={cameraStatusMessage}
+              />
 
-          <div className="flex shrink-0 flex-col items-center gap-3">
-            <Button
-              size="lg"
-              onClick={handleCaptureAndLogin}
-              disabled={!isReady || isCapturing || isPending}
-              className="w-full gap-2 sm:w-auto sm:min-w-[220px]"
-            >
-              <ScanFace className="h-4 w-4" />
-              {isCapturing ? 'Capturing…' : 'Verify & Sign In'}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Ensure good lighting and a clear, front-facing view of your face.
-            </p>
+              {showError && activeError && (
+                <div className="px-4 pb-4">
+                  <AuthErrorFeedback error={activeError} onRetry={handleRetry} />
+                </div>
+              )}
+            </div>
+          </CameraPermissionGate>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4" id="email-login">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase tracking-widest">
+            <span className="bg-background px-3 text-muted-foreground">Or</span>
           </div>
         </div>
-      </CameraPermissionGate>
+
+        <EmailPasswordLoginForm />
+      </div>
     </div>
   );
 }

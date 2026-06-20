@@ -8,26 +8,33 @@ import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/features/dashboard/components/DashboardLayout';
 import { DashboardGreeting } from '@/features/dashboard/components/DashboardGreeting';
 import { FashionDNACard } from '@/features/dashboard/components/FashionDNACard';
-import { EmptyWardrobeState } from '@/features/dashboard/components/EmptyWardrobeState';
-import { EmptyRecommendationsState } from '@/features/dashboard/components/EmptyRecommendationsState';
+import { RecentWardrobeWidget } from '@/features/dashboard/components/RecentWardrobeWidget';
+import { FeaturedOutfitWidget } from '@/features/dashboard/components/FeaturedOutfitWidget';
 import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
+import {
+  getLatestOutfit,
+  getRecentWardrobeItems,
+} from '@/features/dashboard/utils/dashboardUtils';
+import { useDashboardStore } from '@/features/dashboard/store/useDashboardStore';
 import { getNetworkErrorMessage } from '@/features/auth/services/apiClient';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
 
 export function DashboardPage() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
-  const cachedFashionDna = useProfileStore((s) => s.fashionDna);
-  const cachedProfile = useProfileStore((s) => s.profile);
-  const cachedPreferences = useProfileStore((s) => s.preferences);
+  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const onboardingComplete = useProfileStore((state) => state.onboardingComplete);
+  const cachedFashionDna = useProfileStore((state) => state.fashionDna);
+  const cachedProfile = useProfileStore((state) => state.profile);
+  const cachedPreferences = useProfileStore((state) => state.preferences);
+  const cachedWardrobeItems = useDashboardStore((state) => state.wardrobeItems);
+  const cachedOutfits = useDashboardStore((state) => state.outfits);
 
   const [hydrated, setHydrated] = useState(false);
-  const { data, isLoading, isError, error } = useDashboard();
+  const { data, isLoading, isFetching, isError, error } = useDashboard();
 
   useEffect(() => {
     useAuthStore.persist.rehydrate();
@@ -55,10 +62,17 @@ export function DashboardPage() {
   const profile = data?.profile ?? cachedProfile;
   const preferences = data?.preferences ?? cachedPreferences;
   const fashionDna = data?.fashionDna ?? cachedFashionDna;
+  const wardrobeItems = data?.wardrobeItems ?? cachedWardrobeItems;
+  const outfits = data?.outfits ?? cachedOutfits;
+  const recentItems = getRecentWardrobeItems(wardrobeItems);
+  const latestOutfit = getLatestOutfit(outfits);
+  const showInitialSkeleton =
+    isLoading && !data && !cachedFashionDna && !wardrobeItems.length && !outfits.length;
+  const widgetsLoading = (isLoading || isFetching) && !recentItems.length && !latestOutfit;
 
   return (
     <DashboardLayout>
-      {isLoading && !data && !cachedFashionDna ? (
+      {showInitialSkeleton ? (
         <DashboardSkeleton />
       ) : (
         <div className="mx-auto max-w-6xl space-y-8">
@@ -87,8 +101,8 @@ export function DashboardPage() {
           <FashionDNACard fashionDna={fashionDna} preferences={preferences} />
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <EmptyWardrobeState />
-            <EmptyRecommendationsState />
+            <RecentWardrobeWidget items={recentItems} isLoading={widgetsLoading} />
+            <FeaturedOutfitWidget outfit={latestOutfit} isLoading={widgetsLoading} />
           </div>
         </div>
       )}

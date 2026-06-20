@@ -63,7 +63,7 @@ export default registerAs('database', () => {
           10,
         ),
       },
-      similarityThreshold: parseFloat(process.env.QDRANT_SIMILARITY_THRESHOLD || '0.75'),
+      similarityThreshold: parseFloat(process.env.QDRANT_SIMILARITY_THRESHOLD || '0.55'),
     },
   };
 });
