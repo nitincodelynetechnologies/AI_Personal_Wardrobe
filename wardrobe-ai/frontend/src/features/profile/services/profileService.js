@@ -6,17 +6,19 @@ export async function getProfile(token) {
 }
 
 export async function updateProfile(demographics, token) {
+  const body = {};
+
+  if (demographics.gender !== undefined) body.gender = demographics.gender;
+  if (demographics.age !== undefined) body.age = demographics.age;
+  if (demographics.heightCm !== undefined) body.height = demographics.heightCm;
+  if (demographics.weightKg !== undefined) body.weight = demographics.weightKg;
+  if (demographics.bodyType !== undefined) body.body_type = demographics.bodyType;
+  if (demographics.skinTone !== undefined) body.skin_tone = demographics.skinTone;
+
   return apiClient('/profile', {
     method: 'PUT',
     token,
-    body: {
-      gender: demographics.gender,
-      age: demographics.age,
-      height: demographics.heightCm,
-      weight: demographics.weightKg,
-      body_type: demographics.bodyType,
-      skin_tone: demographics.skinTone,
-    },
+    body,
   });
 }
 

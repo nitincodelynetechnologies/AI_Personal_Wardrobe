@@ -4,34 +4,58 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MultiStepOnboarding } from '@/features/profile/components/MultiStepOnboarding';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useProfileStore } from '@/features/profile/store/useProfileStore';
+import {
+  rehydrateAuthStores,
+  syncProfileFromServer,
+} from '@/features/profile/utils/profileSync';
 
 export function OnboardingPage() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
-  const [hydrated, setHydrated] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    useProfileStore.persist.rehydrate();
-    setHydrated(true);
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    if (!hydrated) return;
+    async function bootstrap() {
+      await rehydrateAuthStores();
 
-    if (!isAuthenticated && !accessToken) {
-      router.replace('/login/face');
-      return;
+      const token = useAuthStore.getState().accessToken;
+      const authed = useAuthStore.getState().isAuthenticated;
+
+      if (!authed && !token) {
+        if (!cancelled) router.replace('/login/face');
+        return;
+      }
+
+      if (token) {
+        try {
+          const { onboardingComplete } = await syncProfileFromServer(token);
+          if (!cancelled && onboardingComplete) {
+            router.replace('/dashboard');
+            return;
+          }
+        } catch {
+          // Allow onboarding form when profile sync fails transiently.
+        }
+      }
+
+      if (!cancelled) setReady(true);
     }
 
-    if (onboardingComplete) {
-      router.replace('/dashboard');
-    }
-  }, [hydrated, isAuthenticated, accessToken, onboardingComplete, router]);
+    bootstrap();
 
-  if (!hydrated) {
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  if (!ready) {
+    return null;
+  }
+
+  if (!isAuthenticated && !accessToken) {
     return null;
   }
 

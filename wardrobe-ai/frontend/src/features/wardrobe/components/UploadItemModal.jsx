@@ -164,7 +164,7 @@ export function UploadItemModal({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="mb-0 shrink-0 border-b border-white/10 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+        <DialogHeader className="mb-0 shrink-0 border-b border-borderColor px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
           <DialogTitle>Add to Wardrobe</DialogTitle>
           <DialogDescription>
             Upload a clothing photo and tag it so AI can match outfits to your style.
@@ -187,8 +187,8 @@ export function UploadItemModal({ open, onOpenChange }) {
               className={cn(
                 'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors sm:gap-3 sm:p-6',
                 dragActive
-                  ? 'border-champagne bg-champagne/10'
-                  : 'border-white/15 bg-noir/50 hover:border-champagne/40',
+                  ? 'border-violet bg-violet/10'
+                  : 'border-borderColor bg-background/50 hover:border-violet/40',
               )}
             >
               {previewUrl ? (
@@ -200,8 +200,8 @@ export function UploadItemModal({ open, onOpenChange }) {
                 />
               ) : (
                 <>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-champagne/10 sm:h-14 sm:w-14">
-                    <ImagePlus className="h-6 w-6 text-champagne sm:h-7 sm:w-7" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet/10 sm:h-14 sm:w-14">
+                    <ImagePlus className="h-6 w-6 text-violet sm:h-7 sm:w-7" />
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-medium sm:text-base">Drag & drop your clothing image</p>
@@ -287,7 +287,7 @@ export function UploadItemModal({ open, onOpenChange }) {
                       onClick={() => setForm((prev) => ({ ...prev, color_hex: color.hex }))}
                       className={cn(
                         'h-8 w-8 rounded-full border-2 transition-transform hover:scale-110',
-                        selected ? 'border-champagne ring-2 ring-champagne/40' : 'border-white/20',
+                        selected ? 'border-violet ring-2 ring-violet/40' : 'border-borderColor',
                       )}
                       style={{ backgroundColor: color.hex }}
                     />
@@ -297,7 +297,7 @@ export function UploadItemModal({ open, onOpenChange }) {
             </div>
           </div>
 
-          <div className="shrink-0 space-y-3 border-t border-white/10 bg-noir-elevated px-5 py-4 sm:px-6">
+          <div className="shrink-0 space-y-3 border-t border-borderColor bg-white dark:bg-[#150d22] px-5 py-4 sm:px-6">
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>

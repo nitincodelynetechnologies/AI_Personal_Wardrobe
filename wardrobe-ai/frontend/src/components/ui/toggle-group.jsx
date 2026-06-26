@@ -16,8 +16,8 @@ export function ToggleGroup({ options, value, onChange, className }) {
             className={cn(
               'min-h-11 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
               selected
-                ? 'border-champagne bg-champagne/15 text-champagne'
-                : 'border-white/10 bg-noir-elevated text-muted-foreground hover:border-champagne/40 hover:text-foreground',
+                ? 'border-violet bg-violet/15 text-violet'
+                : 'border-borderColor bg-white dark:bg-[#150d22] text-muted-foreground hover:border-violet/40 hover:text-foreground',
             )}
             aria-pressed={selected}
           >
@@ -51,8 +51,8 @@ export function MultiToggleGroup({ options, values = [], onChange, className }) 
             className={cn(
               'min-h-11 rounded-lg border px-3 py-2 text-sm transition-all',
               selected
-                ? 'border-champagne bg-champagne/15 text-champagne'
-                : 'border-white/10 bg-noir-elevated text-muted-foreground hover:border-champagne/40',
+                ? 'border-violet bg-violet/15 text-violet'
+                : 'border-borderColor bg-white dark:bg-[#150d22] text-muted-foreground hover:border-violet/40',
             )}
             aria-pressed={selected}
           >

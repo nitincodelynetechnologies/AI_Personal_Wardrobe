@@ -15,5 +15,11 @@
     "db:migrate": "powershell -ExecutionPolicy Bypass -File scripts/run-postgres-migrations.ps1",
     "db:qdrant": "powershell -ExecutionPolicy Bypass -File scripts/init-qdrant.ps1",
     "setup": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){fs.copyFileSync('.env.example','.env'); console.log('Created .env');}\" && npm install --prefix frontend"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "recharts": "^3.8.1",
+    "three": "^0.184.0"
   }
 }

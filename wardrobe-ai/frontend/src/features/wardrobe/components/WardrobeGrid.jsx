@@ -11,9 +11,15 @@ export function WardrobeGrid({ items, categoryFilter }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      {filteredItems.map((item) => (
-        <WardrobeItemCard key={item.id} item={item} />
+    <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4 xl:gap-6">
+      {filteredItems.map((item, index) => (
+        <div
+          key={item.id}
+          className="animate-fade-in-view"
+          style={{ animationDelay: `${Math.min(index * 60, 360)}ms` }}
+        >
+          <WardrobeItemCard item={item} />
+        </div>
       ))}
     </div>
   );

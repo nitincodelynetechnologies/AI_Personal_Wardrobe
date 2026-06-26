@@ -20,8 +20,8 @@ export function SelectTrigger({ className, children, ...props }) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'flex h-11 w-full items-center justify-between rounded-lg border border-white/10 bg-noir px-3 py-2 text-sm',
-        'focus:outline-none focus:ring-2 focus:ring-champagne/50 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-11 w-full items-center justify-between rounded-lg border border-borderColor bg-white dark:bg-[#150d22] px-3 py-2 text-sm text-slate-900 dark:text-white',
+        'focus:outline-none focus:ring-2 focus:ring-violet/50 disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -40,7 +40,7 @@ export function SelectContent({ className, children, position = 'popper', ...pro
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          'z-50 overflow-hidden rounded-lg border border-white/10 bg-noir-elevated shadow-xl',
+          'z-50 overflow-hidden rounded-lg border border-borderColor bg-white dark:bg-[#150d22] shadow-xl',
           'data-[state=open]:animate-fade-up',
           className,
         )}
@@ -57,14 +57,14 @@ export function SelectItem({ className, children, ...props }) {
     <SelectPrimitive.Item
       className={cn(
         'relative flex cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-3 text-sm outline-none',
-        'focus:bg-champagne/15 focus:text-champagne data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'focus:bg-violet/15 focus:text-violet data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,
       )}
       {...props}
     >
       <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4 text-champagne" />
+          <Check className="h-4 w-4 text-violet" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

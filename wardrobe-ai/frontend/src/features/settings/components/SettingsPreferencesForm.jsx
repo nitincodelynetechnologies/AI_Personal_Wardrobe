@@ -30,7 +30,7 @@ export function SettingsPreferencesForm({ data, errors, onChange }) {
                 onClick={() => toggleColor(color.value)}
                 className={cn(
                   'group flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all',
-                  selected && 'bg-champagne/10 ring-1 ring-champagne/50',
+                  selected && 'bg-violet/10 ring-1 ring-violet/50',
                 )}
                 aria-pressed={selected}
                 aria-label={color.label}
@@ -38,7 +38,7 @@ export function SettingsPreferencesForm({ data, errors, onChange }) {
                 <span
                   className={cn(
                     'h-10 w-10 rounded-full border-2 transition-transform group-hover:scale-105',
-                    selected ? 'border-champagne' : 'border-white/20',
+                    selected ? 'border-violet' : 'border-borderColor',
                   )}
                   style={{ backgroundColor: color.hex }}
                 />

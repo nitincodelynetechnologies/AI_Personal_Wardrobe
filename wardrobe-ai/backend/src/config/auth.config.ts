@@ -11,7 +11,7 @@ export default registerAs('auth', () => ({
     'localhost',
     '8000',
   ),
-  faceServiceMock: process.env.FACE_SERVICE_MOCK === 'true',
+  faceServiceMock: process.env.FACE_SERVICE_MOCK !== 'false',
   faceServiceTimeoutMs: parseInt(process.env.FACE_SERVICE_TIMEOUT_MS || '10000', 10),
   faceLoginSimilarityThreshold: parseFloat(
     process.env.FACE_LOGIN_SIMILARITY_THRESHOLD || '0.55',

@@ -3,12 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Alert } from '@/components/ui/alert';
+import {
+  AUTH_MINIMAL_INPUT,
+  AUTH_PRIMARY_BUTTON,
+} from '@/features/auth/components/AuthSplitShell';
 import { usePasswordLogin } from '@/features/auth/hooks/usePasswordLogin';
-import { useProfileStore } from '@/features/profile/store/useProfileStore';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { ApiError } from '@/features/auth/services/apiClient';
+import {
+  getPostLoginPath,
+  syncProfileFromServer,
+} from '@/features/profile/utils/profileSync';
 
 function getPasswordLoginErrorMessage(error) {
   if (!error) return 'Unable to sign in. Please try again.';
@@ -27,7 +33,6 @@ function getPasswordLoginErrorMessage(error) {
 
 export function EmailPasswordLoginForm() {
   const router = useRouter();
-  const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
   const { mutate: submitLogin, isPending, isError, error, reset } = usePasswordLogin();
 
   const [email, setEmail] = useState('');
@@ -40,20 +45,31 @@ export function EmailPasswordLoginForm() {
     submitLogin(
       { email: email.trim(), password },
       {
-        onSuccess: () => {
-          router.push(onboardingComplete ? '/dashboard' : '/onboarding');
+        onSuccess: async (data) => {
+          const token = data.jwt_token ?? useAuthStore.getState().accessToken;
+          if (!token) {
+            router.push('/onboarding');
+            return;
+          }
+
+          try {
+            const { onboardingComplete } = await syncProfileFromServer(token);
+            router.push(getPostLoginPath(onboardingComplete));
+          } catch {
+            router.push('/onboarding');
+          }
         },
       },
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-lg space-y-4">
-      <div className="space-y-2">
-        <label htmlFor="login-email" className="text-sm font-medium text-foreground">
+    <form onSubmit={handleSubmit} className="w-full space-y-6">
+      <div className="space-y-1">
+        <label htmlFor="login-email" className="text-xs font-medium uppercase tracking-widest text-slate-700 dark:text-gray-400">
           Email
         </label>
-        <Input
+        <input
           id="login-email"
           type="email"
           autoComplete="email"
@@ -62,14 +78,18 @@ export function EmailPasswordLoginForm() {
           onChange={(event) => setEmail(event.target.value)}
           required
           disabled={isPending}
+          className={AUTH_MINIMAL_INPUT}
         />
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="login-password" className="text-sm font-medium text-foreground">
+      <div className="space-y-1">
+        <label
+          htmlFor="login-password"
+          className="text-xs font-medium uppercase tracking-widest text-slate-700 dark:text-gray-400"
+        >
           Password
         </label>
-        <Input
+        <input
           id="login-password"
           type="password"
           autoComplete="current-password"
@@ -79,25 +99,26 @@ export function EmailPasswordLoginForm() {
           required
           minLength={8}
           disabled={isPending}
+          className={AUTH_MINIMAL_INPUT}
         />
       </div>
 
       {isError && (
-        <Alert variant="destructive" className="text-sm">
+        <Alert variant="destructive" className="rounded-none border-l-2 border-destructive text-sm">
           {getPasswordLoginErrorMessage(error)}
         </Alert>
       )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+      <button type="submit" disabled={isPending} className={`${AUTH_PRIMARY_BUTTON} mt-6`}>
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Signing in…
+            Signing in
           </>
         ) : (
-          'Sign in with Email'
+          'Sign In'
         )}
-      </Button>
+      </button>
     </form>
   );
 }

@@ -114,7 +114,14 @@ export class OutfitsService {
 
     const fashionDna = await this.fashionDnaService.getByUserId(userId).catch(() => null);
 
-    const selection = await this.stylistService.recommendOutfit(wardrobeItems, seasonTag, fashionDna);
+    const recentCombos = await this.getRecentOutfitCombos(userId);
+
+    const selection = await this.stylistService.recommendOutfit(
+      wardrobeItems,
+      seasonTag,
+      fashionDna,
+      recentCombos,
+    );
 
 
 
@@ -333,6 +340,26 @@ export class OutfitsService {
   }
 
 
+
+  private async getRecentOutfitCombos(
+    userId: string,
+    limit = 20,
+  ): Promise<Array<{ top_id: string; bottom_id: string; footwear_id: string }>> {
+    const result = await this.postgresService.query<{
+      top_id: string;
+      bottom_id: string;
+      footwear_id: string;
+    }>(
+      `SELECT top_id, bottom_id, footwear_id
+       FROM ${POSTGRES_TABLES.OUTFITS}
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit],
+    );
+
+    return result.rows;
+  }
 
   private async getOutfitById(userId: string, outfitId: string): Promise<PopulatedOutfit | null> {
 

@@ -22,10 +22,10 @@ export function FashionDNACard({ fashionDna, preferences }) {
 
   if (isMissing) {
     return (
-      <Card className="border-dashed border-champagne/30 bg-noir-elevated/40">
+      <Card className="border-dashed border-violet/30 bg-white/40 dark:bg-[#150d22]/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display">
-            <Sparkles className="h-5 w-5 text-champagne" />
+          <CardTitle className="flex items-center gap-2 font-playfair">
+            <Sparkles className="h-5 w-5 text-violet" />
             Fashion DNA
           </CardTitle>
           <CardDescription>
@@ -42,10 +42,10 @@ export function FashionDNACard({ fashionDna, preferences }) {
   }
 
   return (
-    <Card className="border-white/10 bg-gradient-to-br from-noir-elevated/80 to-noir-surface/40">
+    <Card className="animate-fade-in-view stagger-1 border-borderColor bg-gradient-to-br from-surface/90 to-noir-surface/50 shadow-xl shadow-black/20 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-display text-xl">
-          <Sparkles className="h-5 w-5 text-champagne" />
+        <CardTitle className="flex items-center gap-2 font-playfair text-xl">
+          <Sparkles className="h-5 w-5 text-violet" />
           Fashion DNA
         </CardTitle>
         <CardDescription>
@@ -54,18 +54,18 @@ export function FashionDNACard({ fashionDna, preferences }) {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="rounded-xl border border-champagne/20 bg-champagne/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-wider text-champagne/80">Primary Style</p>
-          <p className="font-display text-2xl font-semibold text-gradient-gold">
+        <div className="rounded-xl border border-violet/20 bg-violet/5 px-4 py-3">
+          <p className="text-xs uppercase tracking-wider text-violet/80">Primary Style</p>
+          <p className="font-playfair text-2xl font-semibold text-gradient-gold">
             {formatLabel(primaryStyle)}
           </p>
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-white/5 p-4">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-borderColor p-4">
             <RadialScore value={fashionDna.style_score} label="Style" />
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-white/5 p-4">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-borderColor p-4">
             <RadialScore value={fashionDna.lifestyle_score} label="Lifestyle" />
           </div>
         </div>
@@ -80,12 +80,12 @@ export function FashionDNACard({ fashionDna, preferences }) {
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 capitalize">
                     <span
-                      className="h-3 w-3 rounded-full border border-white/20"
+                      className="h-3 w-3 rounded-full border border-borderColor"
                       style={{ backgroundColor: COLOR_HEX_MAP[item.name] || '#888' }}
                     />
                     {item.name}
                   </span>
-                  <span className="text-champagne">{item.score}%</span>
+                  <span className="text-violet">{item.score}%</span>
                 </div>
                 <Progress value={item.score} className="h-1.5" />
               </div>

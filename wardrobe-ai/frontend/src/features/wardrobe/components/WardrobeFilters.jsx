@@ -21,8 +21,8 @@ export function WardrobeFilters() {
             className={cn(
               'rounded-full px-4 py-1.5 text-sm transition-colors',
               active
-                ? 'bg-champagne text-noir font-medium'
-                : 'border border-white/10 bg-noir-elevated/50 text-muted-foreground hover:border-champagne/30 hover:text-foreground',
+                ? 'bg-violet text-white font-medium'
+                : 'border border-borderColor bg-white/5 dark:bg-[#150d22]/50 text-muted-foreground hover:border-violet/30 hover:text-foreground',
             )}
           >
             {filter.label}

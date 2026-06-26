@@ -6,7 +6,7 @@ import { Check, Loader2, ShieldCheck } from 'lucide-react';
 
 export function LivenessIndicator({ isVerified, isVerifying, statusMessage }) {
   return (
-    <div className="w-full shrink-0 rounded-xl border border-white/5 bg-noir-surface/60 p-3 backdrop-blur-sm sm:p-4">
+    <div className="w-full shrink-0 rounded-xl border border-borderColor bg-white/60 dark:bg-[#150d22]/60 p-3 backdrop-blur-sm sm:p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-foreground">Real-Time Face Detection</h3>
         <span className="text-xs text-muted-foreground">
@@ -17,16 +17,16 @@ export function LivenessIndicator({ isVerified, isVerifying, statusMessage }) {
       <div
         className={cn(
           'mt-3 flex items-center gap-3 rounded-lg border px-3 py-2 transition-all duration-300',
-          isVerified && 'border-green-500/30 bg-green-500/5',
-          isVerifying && 'border-champagne/50 bg-champagne/10',
+          isVerified && 'border-magenta/30 bg-magenta/5',
+          isVerifying && 'border-violet/50 bg-violet/10',
           !isVerified && !isVerifying && 'border-border/50 bg-transparent',
         )}
       >
         <div
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-            isVerified && 'bg-green-500 text-noir',
-            isVerifying && 'bg-champagne/20 text-champagne',
+            isVerified && 'bg-magenta text-white',
+            isVerifying && 'bg-violet/20 text-violet',
             !isVerified && !isVerifying && 'bg-muted text-muted-foreground',
           )}
         >
@@ -43,7 +43,7 @@ export function LivenessIndicator({ isVerified, isVerifying, statusMessage }) {
           <p
             className={cn(
               'text-sm font-medium',
-              isVerified && 'text-green-400',
+              isVerified && 'text-magenta',
               isVerifying && 'text-foreground',
               !isVerified && !isVerifying && 'text-muted-foreground',
             )}

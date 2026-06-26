@@ -33,6 +33,10 @@ export function getFaceLoginErrorMessage(error) {
     return ERROR_MESSAGES[status] || error.message || ERROR_MESSAGES.default;
   }
 
+  if (status === 500) {
+    return ERROR_MESSAGES[503];
+  }
+
   return error.message || ERROR_MESSAGES.default;
 }
 
@@ -53,7 +57,7 @@ export function AuthErrorFeedback({ error, onRetry, className }) {
       </div>
 
       <div className="space-y-2">
-        <h2 className="font-display text-xl font-semibold text-foreground sm:text-2xl">
+        <h2 className="font-playfair text-xl font-semibold text-foreground sm:text-2xl">
           Verification Failed
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>

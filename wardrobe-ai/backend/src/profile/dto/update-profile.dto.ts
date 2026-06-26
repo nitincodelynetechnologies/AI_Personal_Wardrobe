@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNumber,
@@ -18,6 +19,7 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({ example: 28 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(150)
@@ -25,12 +27,14 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({ example: 165.5, description: 'Height in centimeters' })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   height?: number;
 
   @ApiPropertyOptional({ example: 62.0, description: 'Weight in kilograms' })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   weight?: number;

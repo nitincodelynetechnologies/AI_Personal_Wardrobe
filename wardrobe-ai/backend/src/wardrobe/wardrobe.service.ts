@@ -44,7 +44,10 @@ export class WardrobeService {
     this.qdrantService.assertReady();
 
     const { buffer: imageBuffer, mimetype } = await this.prepareImageForStorage(file);
-    const analysis = await this.clothingAiService.analyzeClothing(imageBuffer);
+    const analysis = await this.clothingAiService.analyzeClothing(imageBuffer, {
+      category: dto.category,
+      color_hex: dto.color_hex,
+    });
     const category = this.resolveCategory(analysis.category, dto.category);
     const colorHex = analysis.color_hex || dto.color_hex || null;
 

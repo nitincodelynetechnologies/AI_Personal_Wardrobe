@@ -11,6 +11,8 @@ export default registerAs('stylist', () => ({
     'localhost',
     '8001',
   ),
+  /** Skip Python stylist HTTP calls; use deterministic local analysis (default on for local dev). */
+  serviceMock: process.env.CLOTHING_SERVICE_MOCK !== 'false',
   timeoutMs: parseInt(process.env.STYLIST_SERVICE_TIMEOUT_MS || '15000', 10),
   bgRemovalTimeoutMs: parseInt(process.env.STYLIST_BG_REMOVAL_TIMEOUT_MS || '45000', 10),
 }));

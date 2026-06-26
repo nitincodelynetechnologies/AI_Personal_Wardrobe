@@ -117,10 +117,10 @@ export function MultiStepOnboarding() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-10">
       <header className="mb-8 space-y-4 text-center animate-fade-up">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-champagne">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet">
           Style Onboarding
         </p>
-        <h1 className="font-display text-2xl font-semibold sm:text-3xl">
+        <h1 className="font-playfair text-2xl font-semibold sm:text-3xl">
           Build Your Fashion Profile
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -129,9 +129,9 @@ export function MultiStepOnboarding() {
         <OnboardingStepper currentStep={step} />
       </header>
 
-      <Card className="border-white/10 bg-noir-elevated/60 backdrop-blur">
+      <Card className="border-borderColor bg-white/60 dark:bg-[#150d22]/60 backdrop-blur">
         <CardHeader>
-          <CardTitle className="font-display text-xl">
+          <CardTitle className="font-playfair text-xl">
             {step === 1 ? 'About You' : 'Your Style DNA Inputs'}
           </CardTitle>
           <CardDescription>

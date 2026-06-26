@@ -36,7 +36,7 @@ export function AlertDialogContent({ className, ...props }) {
       <AlertDialogPrimitive.Content
         className={cn(
           'fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
-          'rounded-xl border border-white/10 bg-noir-elevated p-6 shadow-2xl duration-200',
+          'rounded-xl border border-borderColor bg-white dark:bg-[#150d22] p-6 shadow-2xl duration-200',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -64,7 +64,7 @@ export function AlertDialogFooter({ className, ...props }) {
 export function AlertDialogTitle({ className, ...props }) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn('font-display text-lg font-semibold', className)}
+      className={cn('font-playfair text-lg font-semibold', className)}
       {...props}
     />
   );

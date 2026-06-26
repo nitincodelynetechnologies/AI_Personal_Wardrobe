@@ -18,7 +18,7 @@ export function Alert({ className, variant = 'default', children, ...props }) {
       className={cn(
         'relative flex w-full items-start gap-3 rounded-lg border p-4',
         variant === 'destructive' && 'border-destructive/50 bg-destructive/10 text-destructive',
-        variant === 'success' && 'border-champagne/30 bg-champagne/10 text-champagne-light',
+        variant === 'success' && 'border-violet/30 bg-violet/10 text-violet-light',
         variant === 'default' && 'border-border bg-muted/50',
         className,
       )}

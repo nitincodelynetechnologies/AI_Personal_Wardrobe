@@ -19,7 +19,7 @@ export default function FaceRegisterError({ error, reset }) {
         </div>
 
         <div className="space-y-2">
-          <h2 className="font-display text-2xl font-semibold">Something Went Wrong</h2>
+          <h2 className="font-playfair text-2xl font-semibold">Something Went Wrong</h2>
           <p className="text-sm text-muted-foreground">
             We couldn&apos;t load the face registration experience. Please try again.
           </p>

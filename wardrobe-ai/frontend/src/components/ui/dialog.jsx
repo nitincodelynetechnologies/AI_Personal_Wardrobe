@@ -40,7 +40,7 @@ export function DialogContent({ className, children, ...props }) {
       <DialogPrimitive.Content
         className={cn(
           'fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden',
-          'rounded-xl border border-white/10 bg-noir-elevated p-6 shadow-2xl duration-200',
+          'rounded-xl border border-borderColor bg-white dark:bg-[#150d22] p-6 shadow-2xl duration-200',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -65,7 +65,7 @@ export function DialogHeader({ className, ...props }) {
 export function DialogTitle({ className, ...props }) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-display text-xl font-semibold', className)}
+      className={cn('font-playfair text-xl font-semibold', className)}
       {...props}
     />
   );

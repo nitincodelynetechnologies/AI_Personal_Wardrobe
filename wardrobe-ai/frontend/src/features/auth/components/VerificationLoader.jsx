@@ -30,26 +30,26 @@ export function VerificationLoader({ message = 'Verifying identity…' }) {
     >
       <div className="relative mb-10">
         <div
-          className="absolute inset-0 rounded-full bg-champagne/15 blur-3xl animate-pulse-ring"
+          className="absolute inset-0 rounded-full bg-violet/15 blur-3xl animate-pulse-ring"
           aria-hidden
         />
         <div
           className={cn(
             'relative flex h-32 w-32 items-center justify-center rounded-full',
-            'border-2 border-champagne/50 bg-noir-elevated',
+            'border-2 border-violet/50 bg-white dark:bg-[#150d22]',
           )}
         >
-          <div className="absolute inset-2 rounded-full border border-champagne/20" aria-hidden />
-          <Fingerprint className="h-14 w-14 text-champagne animate-pulse" aria-hidden />
+          <div className="absolute inset-2 rounded-full border border-violet/20" aria-hidden />
+          <Fingerprint className="h-14 w-14 text-violet animate-pulse" aria-hidden />
         </div>
         <div
-          className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 animate-scan bg-gradient-to-b from-transparent via-champagne/50 to-transparent"
+          className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 animate-scan bg-gradient-to-b from-transparent via-violet/50 to-transparent"
           aria-hidden
         />
       </div>
 
       <div className="max-w-md space-y-2 text-center">
-        <h2 className="font-display text-2xl font-semibold text-gradient-gold sm:text-3xl">
+        <h2 className="font-playfair text-2xl font-semibold text-gradient-gold sm:text-3xl">
           Biometric Scan
         </h2>
         <p className="text-sm text-muted-foreground">{message}</p>
@@ -66,16 +66,16 @@ export function VerificationLoader({ message = 'Verifying identity…' }) {
               key={step.id}
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-4 py-3 transition-all duration-500',
-                isComplete && 'border-champagne/30 bg-champagne/5',
-                isActive && 'border-champagne/50 bg-champagne/10',
+                isComplete && 'border-violet/30 bg-violet/5',
+                isActive && 'border-violet/50 bg-violet/10',
                 !isActive && !isComplete && 'border-border/40 bg-transparent opacity-50',
               )}
             >
               <div
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                  isComplete && 'bg-champagne text-noir',
-                  isActive && 'bg-champagne/20 text-champagne',
+                  isComplete && 'bg-violet text-white',
+                  isActive && 'bg-violet/20 text-violet',
                   !isActive && !isComplete && 'bg-muted text-muted-foreground',
                 )}
               >
@@ -96,7 +96,7 @@ export function VerificationLoader({ message = 'Verifying identity…' }) {
       </ul>
 
       <div className="mt-8 h-1 w-48 overflow-hidden rounded-full bg-secondary">
-        <div className="h-full w-1/2 animate-shimmer rounded-full bg-gradient-to-r from-transparent via-champagne to-transparent bg-[length:200%_100%]" />
+        <div className="h-full w-1/2 animate-shimmer rounded-full bg-gradient-to-r from-transparent via-violet to-transparent bg-[length:200%_100%]" />
       </div>
     </div>
   );

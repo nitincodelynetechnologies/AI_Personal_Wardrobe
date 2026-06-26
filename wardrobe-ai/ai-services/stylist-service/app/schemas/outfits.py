@@ -18,10 +18,17 @@ class FashionDnaInput(BaseModel):
     brand_affinity: dict[str, float] = Field(default_factory=dict)
 
 
+class OutfitComboExclude(BaseModel):
+    top_id: str
+    bottom_id: str
+    footwear_id: str
+
+
 class OutfitRecommendRequest(BaseModel):
     season: str = "All"
     fashion_dna: FashionDnaInput | None = None
     items: list[WardrobeItemInput] = Field(..., min_length=1)
+    exclude_combos: list[OutfitComboExclude] = Field(default_factory=list)
 
 
 class OutfitRecommendResponse(BaseModel):

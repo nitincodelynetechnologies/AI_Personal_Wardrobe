@@ -9,8 +9,13 @@ const FACE_LOGIN_TIMEOUT_MS = 10000;
  * @returns {Promise<{ success: boolean, jwt_token: string, user: object }>}
  */
 export async function faceLogin(faceBlob) {
+  const imageBlob =
+    faceBlob.type === 'image/jpeg' || faceBlob.type === 'image/png' || faceBlob.type === 'image/webp'
+      ? faceBlob
+      : new Blob([faceBlob], { type: 'image/jpeg' });
+
   const formData = new FormData();
-  formData.append('face', faceBlob, 'face.jpg');
+  formData.append('face', imageBlob, 'face.jpg');
 
   return apiClient('/auth/face-login', {
     method: 'POST',

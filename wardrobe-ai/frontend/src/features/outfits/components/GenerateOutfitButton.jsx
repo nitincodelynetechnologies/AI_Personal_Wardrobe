@@ -10,9 +10,9 @@ export function GenerateOutfitButton({ onClick, isLoading, className }) {
       onClick={onClick}
       disabled={isLoading}
       className={cn(
-        'relative gap-2 overflow-hidden border-0 bg-gradient-to-r from-champagne via-amber-300 to-champagne',
-        'text-noir shadow-lg shadow-champagne/25 transition hover:opacity-90',
-        'before:absolute before:inset-0 before:animate-pulse before:bg-white/20 before:opacity-0 hover:before:opacity-100',
+        'relative gap-2 overflow-hidden border-0 bg-gradient-to-r from-violet via-violet to-violet',
+        'text-slate-900 dark:text-white shadow-lg shadow-violet/25 transition hover:opacity-90',
+        'before:absolute before:inset-0 before:animate-pulse before:bg-white/20 dark:bg-[#150d22]/20 before:opacity-0 hover:before:opacity-100',
         className,
       )}
     >

@@ -19,7 +19,7 @@ export function RadialScore({ value = 0, label, size = 120, className }) {
           fill="none"
           stroke="currentColor"
           strokeWidth={stroke}
-          className="text-white/10"
+          className="text-slate-900 dark:text-white/10"
         />
         <circle
           cx={size / 2}
@@ -31,11 +31,11 @@ export function RadialScore({ value = 0, label, size = 120, className }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="text-champagne transition-all duration-700"
+          className="text-violet transition-all duration-700"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-2xl font-semibold text-foreground">
+        <span className="font-playfair text-2xl font-semibold text-foreground">
           {Math.round(safeValue)}
         </span>
         {label && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>}

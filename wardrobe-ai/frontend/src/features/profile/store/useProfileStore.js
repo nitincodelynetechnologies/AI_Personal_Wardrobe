@@ -27,6 +27,13 @@ export const useProfileStore = create(
           onboardingComplete: true,
         }),
 
+      syncFromServer: ({ profile, preferences, onboardingComplete }) =>
+        set({
+          profile: profile ?? null,
+          preferences: preferences ?? null,
+          onboardingComplete: Boolean(onboardingComplete),
+        }),
+
       resetProfile: () => set({ ...initialState }),
     }),
     {

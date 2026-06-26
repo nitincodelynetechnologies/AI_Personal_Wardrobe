@@ -7,9 +7,10 @@ export function Input({ className, type = 'text', ...props }) {
     <input
       type={type}
       className={cn(
-        'flex h-11 w-full rounded-lg border border-white/10 bg-noir px-3 py-2 text-sm text-foreground',
-        'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne/50',
+        'flex h-11 w-full rounded-xl border border-borderColor bg-white px-3 py-2 text-sm text-slate-900',
+        'placeholder:text-slate-500 focus-visible:border-magenta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-magenta/20',
         'disabled:cursor-not-allowed disabled:opacity-50',
+        'dark:bg-[#150d22] dark:text-white dark:placeholder:text-gray-400',
         className,
       )}
       {...props}
@@ -20,7 +21,7 @@ export function Input({ className, type = 'text', ...props }) {
 export function Label({ className, ...props }) {
   return (
     <label
-      className={cn('text-xs font-medium uppercase tracking-wider text-muted-foreground', className)}
+      className={cn('text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-gray-400', className)}
       {...props}
     />
   );

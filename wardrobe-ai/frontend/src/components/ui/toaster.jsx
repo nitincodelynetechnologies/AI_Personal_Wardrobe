@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export const useToastStore = create((set) => ({
   toasts: [],
   showToast: (toast) => {
-    const id = Date.now();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     set((state) => ({ toasts: [...state.toasts, { id, ...toast }] }));
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) }));
@@ -35,10 +35,10 @@ export function Toaster() {
               'pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg animate-fade-up',
               toast.variant === 'destructive'
                 ? 'border-red-500/30 bg-red-950/90 text-red-100'
-                : 'border-champagne/30 bg-noir-elevated text-foreground',
+                : 'border-violet/30 bg-white dark:bg-[#150d22] text-foreground',
             )}
           >
-            <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', toast.variant === 'destructive' ? 'text-red-400' : 'text-champagne')} />
+            <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', toast.variant === 'destructive' ? 'text-red-400' : 'text-violet')} />
             <div className="flex-1 text-sm">{toast.message}</div>
             <button
               type="button"

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,12 +12,15 @@ import { useDeleteOutfit } from '@/features/outfits/hooks/useDeleteOutfit';
 import { useOutfitStore } from '@/features/outfits/store/useOutfitStore';
 import { OUTFIT_IMAGE_SIZES } from '@/features/wardrobe/constants/wardrobeOptions';
 
+const STUDIO_CARD =
+  'rounded-2xl border border-borderColor bg-white dark:bg-[#150d22] shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer group';
+
 function OutfitPiece({ item, label, className, sizes = OUTFIT_IMAGE_SIZES }) {
   if (!item?.image_url) {
     return (
       <div
         className={cn(
-          'flex items-center justify-center rounded-lg border border-dashed border-white/10 bg-noir/60 text-xs text-muted-foreground',
+          'flex items-center justify-center rounded-lg border border-dashed border-borderColor bg-background text-xs text-slate-700 dark:text-gray-400',
           className,
         )}
       >
@@ -28,15 +30,15 @@ function OutfitPiece({ item, label, className, sizes = OUTFIT_IMAGE_SIZES }) {
   }
 
   return (
-    <div className={cn('relative overflow-hidden rounded-lg bg-noir', className)}>
+    <div className={cn('relative overflow-hidden rounded-lg bg-gray-100', className)}>
       <Image
         src={item.image_url}
         alt={item.sub_category || item.category || label}
         fill
         sizes={sizes}
-        className="object-cover"
+        className="object-cover transition-transform duration-700 group-hover:scale-105"
       />
-      <span className="absolute bottom-1 left-1 rounded bg-noir/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-champagne">
+      <span className="absolute bottom-1 left-1 rounded bg-magenta/90 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[#7c3aed]">
         {label}
       </span>
     </div>
@@ -63,10 +65,10 @@ export function OutfitCard({ outfit }) {
 
   const scoreTone =
     liveOutfit.style_score >= 90
-      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+      ? 'border-magenta/30 bg-magenta/10 text-magenta'
       : liveOutfit.style_score >= 80
-        ? 'border-champagne/30 bg-champagne/10 text-champagne'
-        : 'border-white/10 bg-white/5 text-foreground';
+        ? 'border-violet/30 bg-violet/10 text-violet'
+        : 'border-borderColor bg-background text-slate-700 dark:text-gray-400';
 
   const pendingForCard = isFeedbackPending && variables?.outfitId === liveOutfit.id;
 
@@ -102,13 +104,13 @@ export function OutfitCard({ outfit }) {
 
   return (
     <>
-      <Card className="group overflow-hidden border-white/10 bg-noir-elevated/40 transition-colors hover:border-champagne/30">
-        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 p-4 pb-3">
+      <div className={STUDIO_CARD}>
+        <div className="flex flex-row items-start justify-between gap-3 p-4 pb-3">
           <div className="min-w-0 space-y-1">
-            <p className="truncate font-display text-base font-semibold">
+            <p className="truncate font-playfair text-base font-semibold text-slate-900 dark:text-white">
               {liveOutfit.name || 'AI Styled Look'}
             </p>
-            <Badge variant="outline" className="border-white/10 text-[10px] uppercase tracking-wide">
+            <Badge variant="outline" className="border-borderColor text-[10px] uppercase tracking-wide text-magenta">
               {liveOutfit.season_tag}
             </Badge>
           </div>
@@ -120,16 +122,16 @@ export function OutfitCard({ outfit }) {
               type="button"
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-muted-foreground opacity-100 hover:bg-destructive/20 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
+              className="h-8 w-8 text-slate-700 dark:text-gray-400 opacity-100 hover:bg-rose-500/10 hover:text-rose-400 sm:opacity-0 sm:group-hover:opacity-100"
               onClick={handleDeleteClick}
               aria-label="Delete outfit"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="space-y-3 p-4 pt-0">
+        <div className="space-y-3 px-4 pb-4">
           <OutfitPiece item={liveOutfit.top} label="Top" className="aspect-[4/3] w-full" />
 
           <div className="grid grid-cols-2 gap-2">
@@ -145,8 +147,8 @@ export function OutfitCard({ outfit }) {
             />
           )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3">
-            <p className="text-xs text-muted-foreground">How does this look?</p>
+          <div className="flex items-center justify-between gap-2 border-t border-borderColor pt-3">
+            <p className="text-xs text-slate-700 dark:text-gray-400">How does this look?</p>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -154,7 +156,8 @@ export function OutfitCard({ outfit }) {
                 variant={feedbackState === 'like' ? 'default' : 'outline'}
                 className={cn(
                   'gap-1.5',
-                  feedbackState === 'like' && 'bg-champagne text-noir hover:bg-champagne/90',
+                  feedbackState === 'like' &&
+                    'border-0 bg-magenta font-bold text-white hover:bg-magenta/80',
                 )}
                 disabled={pendingForCard}
                 onClick={(event) => handleFeedbackClick(event, true)}
@@ -167,7 +170,7 @@ export function OutfitCard({ outfit }) {
                 type="button"
                 size="sm"
                 variant={feedbackState === 'dislike' ? 'destructive' : 'outline'}
-                className="gap-1.5"
+                className="gap-1.5 border-borderColor"
                 disabled={pendingForCard}
                 onClick={(event) => handleFeedbackClick(event, false)}
                 aria-pressed={feedbackState === 'dislike'}
@@ -177,8 +180,8 @@ export function OutfitCard({ outfit }) {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <DeleteConfirmationDialog
         open={deleteOpen}

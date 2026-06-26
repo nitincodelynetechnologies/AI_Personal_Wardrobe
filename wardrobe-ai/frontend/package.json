@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3003",
+    "dev:local": "node ./node_modules/next/dist/bin/next dev -p 3003",
+    "dev:fresh": "node scripts/clean-next.js && node ./node_modules/next/dist/bin/next dev -p 3003",
     "build": "node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start",
     "lint": "node ./node_modules/next/dist/bin/next lint",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
-    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "clean": "node scripts/clean-next.js",
     "postinstall": "node scripts/copy-face-models.js"
   },
   "dependencies": {
@@ -19,6 +21,8 @@
     "@radix-ui/react-select": "^2.3.1",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.15",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@tanstack/react-query": "^5.62.8",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@tensorflow/tfjs-core": "^4.22.0",
@@ -32,8 +36,10 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.184.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },

@@ -234,6 +234,12 @@ describe('OutfitsService', () => {
 
       .mockResolvedValueOnce({
 
+        rows: [],
+
+      })
+
+      .mockResolvedValueOnce({
+
         rows: [
 
           {
@@ -325,6 +331,8 @@ describe('OutfitsService', () => {
       'All',
 
       null,
+
+      [],
 
     );
 

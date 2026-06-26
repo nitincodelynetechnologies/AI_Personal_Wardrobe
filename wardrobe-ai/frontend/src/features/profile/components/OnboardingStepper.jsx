@@ -17,9 +17,9 @@ export function OnboardingStepper({ currentStep }) {
               <div
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all',
-                  isComplete && 'border-champagne bg-champagne text-noir',
-                  isCurrent && 'border-champagne bg-champagne/15 text-champagne scale-110',
-                  !isComplete && !isCurrent && 'border-white/10 text-muted-foreground',
+                  isComplete && 'border-violet bg-violet text-white',
+                  isCurrent && 'border-violet bg-violet/15 text-violet scale-110',
+                  !isComplete && !isCurrent && 'border-borderColor text-muted-foreground',
                 )}
               >
                 {isComplete ? <Check className="h-4 w-4" /> : step.id}
@@ -27,7 +27,7 @@ export function OnboardingStepper({ currentStep }) {
               <span
                 className={cn(
                   'hidden text-[10px] font-medium sm:block',
-                  isCurrent ? 'text-champagne' : 'text-muted-foreground',
+                  isCurrent ? 'text-violet' : 'text-muted-foreground',
                 )}
               >
                 {step.label}
@@ -38,7 +38,7 @@ export function OnboardingStepper({ currentStep }) {
               <div
                 className={cn(
                   'h-0.5 w-8 sm:w-16',
-                  isComplete ? 'bg-champagne' : 'bg-white/10',
+                  isComplete ? 'bg-violet' : 'bg-white/5 dark:bg-[#150d22]/5',
                 )}
                 aria-hidden
               />

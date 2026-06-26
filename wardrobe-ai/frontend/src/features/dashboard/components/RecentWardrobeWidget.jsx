@@ -9,7 +9,7 @@ import { EmptyWardrobeState } from '@/features/dashboard/components/EmptyWardrob
 import { WARDROBE_GRID_IMAGE_SIZES } from '@/features/wardrobe/constants/wardrobeOptions';
 
 function MiniItemSkeleton() {
-  return <div className="aspect-[3/4] animate-pulse rounded-lg bg-white/5" />;
+  return <div className="aspect-[3/4] animate-pulse rounded-lg bg-white/5 dark:bg-[#150d22]/5" />;
 }
 
 export function RecentWardrobeWidget({ items = [], isLoading = false }) {
@@ -18,17 +18,17 @@ export function RecentWardrobeWidget({ items = [], isLoading = false }) {
   }
 
   return (
-    <Card className="border-white/10 bg-noir-elevated/30">
+    <Card className="animate-fade-in-view stagger-2 border-borderColor bg-white/40 dark:bg-[#150d22]/40 shadow-xl shadow-black/20 backdrop-blur-sm transition-all duration-300 hover:border-violet/20">
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <div>
-          <CardTitle className="flex items-center gap-2 font-display text-lg">
-            <Shirt className="h-5 w-5 text-champagne" />
+          <CardTitle className="flex items-center gap-2 font-playfair text-lg">
+            <Shirt className="h-5 w-5 text-violet" />
             My Wardrobe
           </CardTitle>
           <CardDescription>Your latest AI-tagged additions.</CardDescription>
         </div>
-        <Button asChild variant="ghost" size="sm" className="gap-1 text-champagne">
-          <Link href="/wardrobe">
+        <Button asChild variant="ghost" size="sm" className="gap-1 text-violet">
+          <Link href="/closet">
             View Full Wardrobe
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -42,10 +42,10 @@ export function RecentWardrobeWidget({ items = [], isLoading = false }) {
             : items.map((item) => (
                 <Link
                   key={item.id}
-                  href="/wardrobe"
-                  className="group overflow-hidden rounded-lg border border-white/10 bg-noir transition-colors hover:border-champagne/30"
+                  href="/closet"
+                  className="card-3d-pop group overflow-hidden rounded-lg border border-borderColor bg-background transition-all duration-300"
                 >
-                  <div className="relative aspect-[3/4] bg-noir">
+                  <div className="relative aspect-[3/4] bg-background">
                     {item.image_url ? (
                       <Image
                         src={item.image_url}

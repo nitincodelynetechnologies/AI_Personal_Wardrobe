@@ -1,5 +1,6 @@
 import logging
 import math
+import random
 from functools import lru_cache
 
 import numpy as np
@@ -11,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_CATEGORIES = ("Top", "Bottom", "Footwear")
 VALID_SEASONS = ("Summer", "Winter", "Spring", "Fall", "All")
+TOP_ITEM_POOL_SIZE = 5
+TOP_COMBO_POOL_SIZE = 20
+COMBO_SCORE_EPSILON = 0.05
+MIN_DIVERSE_POOL = 3
 
 COLOR_NAME_RGB: dict[str, tuple[int, int, int]] = {
     "black": (0, 0, 0),
@@ -51,39 +56,213 @@ class RecommendationService:
                 "Not enough items in wardrobe to generate an outfit.",
             )
 
-        best_score = -1.0
-        best_combo: tuple[WardrobeItemInput, WardrobeItemInput, WardrobeItemInput] | None = None
+        tops = buckets["Top"]
+        bottoms = buckets["Bottom"]
+        footwear = buckets["Footwear"]
 
-        for top in buckets["Top"]:
-            for bottom in buckets["Bottom"]:
-                for footwear in buckets["Footwear"]:
-                    score = self._score_outfit(top, bottom, footwear, payload.fashion_dna, season)
-                    if score > best_score:
-                        best_score = score
-                        best_combo = (top, bottom, footwear)
+        top_pool = self._build_item_pool(
+            tops,
+            bottoms,
+            footwear,
+            slot="top",
+            fashion_dna=payload.fashion_dna,
+            season=season,
+        )
+        bottom_pool = self._build_item_pool(
+            bottoms,
+            tops,
+            footwear,
+            slot="bottom",
+            fashion_dna=payload.fashion_dna,
+            season=season,
+        )
+        footwear_pool = self._build_item_pool(
+            footwear,
+            tops,
+            bottoms,
+            slot="footwear",
+            fashion_dna=payload.fashion_dna,
+            season=season,
+        )
 
-        if best_combo is None:
+        logger.info(
+            "Generating combination from pool sizes: tops=%s bottoms=%s footwear=%s",
+            len(top_pool),
+            len(bottom_pool),
+            len(footwear_pool),
+        )
+
+        scored_combos: list[
+            tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]
+        ] = []
+        for top in top_pool:
+            for bottom in bottom_pool:
+                for shoe in footwear_pool:
+                    score = self._score_outfit(top, bottom, shoe, payload.fashion_dna, season)
+                    score += random.uniform(0, 0.008)
+                    scored_combos.append((score, top, bottom, shoe))
+
+        excluded_keys = self._build_excluded_combo_keys(payload.exclude_combos)
+        available_combos = self._filter_excluded_combos(scored_combos, excluded_keys)
+
+        if not available_combos:
+            total_unique = len(
+                {
+                    self._combo_key(combo[1], combo[2], combo[3])
+                    for combo in scored_combos
+                }
+            )
+            if total_unique <= 1:
+                raise RecommendationServiceError(
+                    "NO_NEW_COMBINATIONS",
+                    "Your wardrobe only has one possible outfit. Add more tops, bottoms, or shoes for variety.",
+                )
+            raise RecommendationServiceError(
+                "NO_NEW_COMBINATIONS",
+                "All recent outfit combinations have been used. Add more wardrobe items or delete saved looks to refresh.",
+            )
+
+        candidate_pool = self._select_top_combos(available_combos)
+        selected = self._weighted_pick(candidate_pool)
+        if selected is None:
             raise RecommendationServiceError(
                 "RECOMMENDATION_FAILED",
                 "Unable to recommend an outfit from the provided wardrobe.",
             )
 
+        best_score, top, bottom, footwear_item = selected
         style_score = self._to_style_score(best_score)
-        top, bottom, footwear = best_combo
         logger.info(
-            "Recommended outfit top=%s bottom=%s footwear=%s score=%s",
+            "Recommended outfit top=%s bottom=%s footwear=%s score=%s combo_pool=%s",
             top.id,
             bottom.id,
-            footwear.id,
+            footwear_item.id,
             style_score,
+            len(candidate_pool),
         )
 
         return {
             "top_id": top.id,
             "bottom_id": bottom.id,
-            "footwear_id": footwear.id,
+            "footwear_id": footwear_item.id,
             "style_score": style_score,
         }
+
+    def _build_item_pool(
+        self,
+        items: list[WardrobeItemInput],
+        partners_a: list[WardrobeItemInput],
+        partners_b: list[WardrobeItemInput],
+        slot: str,
+        fashion_dna: FashionDnaInput | None,
+        season: str,
+        pool_size: int = TOP_ITEM_POOL_SIZE,
+    ) -> list[WardrobeItemInput]:
+        if not items:
+            return []
+
+        if len(items) <= pool_size:
+            return list(items)
+
+        scored_items: list[tuple[float, WardrobeItemInput]] = []
+        for item in items:
+            best_score = 0.0
+            for partner_a in partners_a:
+                for partner_b in partners_b:
+                    if slot == "top":
+                        score = self._score_outfit(item, partner_a, partner_b, fashion_dna, season)
+                    elif slot == "bottom":
+                        score = self._score_outfit(partner_a, item, partner_b, fashion_dna, season)
+                    else:
+                        score = self._score_outfit(partner_a, partner_b, item, fashion_dna, season)
+                    best_score = max(best_score, score)
+            scored_items.append((best_score, item))
+
+        scored_items.sort(key=lambda entry: entry[0], reverse=True)
+
+        top_slots = min(max(pool_size - 2, 2), len(scored_items))
+        pool: list[WardrobeItemInput] = []
+        seen: set[str] = set()
+
+        for _, item in scored_items[:top_slots]:
+            if item.id in seen:
+                continue
+            seen.add(item.id)
+            pool.append(item)
+
+        remainder = [item for _, item in scored_items[top_slots:] if item.id not in seen]
+        random.shuffle(remainder)
+        for item in remainder:
+            seen.add(item.id)
+            pool.append(item)
+            if len(pool) >= pool_size:
+                break
+
+        return pool or list(items)
+
+    def _build_excluded_combo_keys(
+        self,
+        exclude_combos: list,
+    ) -> set[str]:
+        return {
+            self._combo_key_from_ids(combo.top_id, combo.bottom_id, combo.footwear_id)
+            for combo in exclude_combos
+        }
+
+    def _combo_key(
+        self,
+        top: WardrobeItemInput,
+        bottom: WardrobeItemInput,
+        footwear: WardrobeItemInput,
+    ) -> str:
+        return self._combo_key_from_ids(top.id, bottom.id, footwear.id)
+
+    def _combo_key_from_ids(self, top_id: str, bottom_id: str, footwear_id: str) -> str:
+        return f"{top_id}|{bottom_id}|{footwear_id}"
+
+    def _filter_excluded_combos(
+        self,
+        scored_combos: list[tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]],
+        excluded_keys: set[str],
+    ) -> list[tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]]:
+        if not excluded_keys:
+            return scored_combos
+
+        return [
+            combo
+            for combo in scored_combos
+            if self._combo_key(combo[1], combo[2], combo[3]) not in excluded_keys
+        ]
+
+    def _select_top_combos(
+        self,
+        scored_combos: list[tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]],
+    ) -> list[tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]]:
+        if not scored_combos:
+            return []
+
+        scored_combos.sort(key=lambda entry: entry[0], reverse=True)
+        best_score = scored_combos[0][0]
+        threshold = best_score - COMBO_SCORE_EPSILON
+        near_best = [combo for combo in scored_combos if combo[0] >= threshold]
+
+        if len(near_best) < MIN_DIVERSE_POOL:
+            near_best = scored_combos[: max(MIN_DIVERSE_POOL, min(TOP_COMBO_POOL_SIZE, len(scored_combos)))]
+
+        return near_best[:TOP_COMBO_POOL_SIZE] or scored_combos[:1]
+
+    def _weighted_pick(
+        self,
+        items: list[tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput]],
+    ) -> tuple[float, WardrobeItemInput, WardrobeItemInput, WardrobeItemInput] | None:
+        if not items:
+            return None
+
+        if len(items) == 1:
+            return items[0]
+
+        weights = [max(entry[0], 0.05) for entry in items]
+        return random.choices(items, weights=weights, k=1)[0]
 
     def _bucket_items(
         self,

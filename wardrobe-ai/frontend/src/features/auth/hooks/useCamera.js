@@ -124,7 +124,18 @@ export function useCamera() {
     ctx.drawImage(video, 0, 0);
 
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+
+          resolve(blob.type ? blob : new Blob([blob], { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.92,
+      );
     });
   }, [isReady]);
 

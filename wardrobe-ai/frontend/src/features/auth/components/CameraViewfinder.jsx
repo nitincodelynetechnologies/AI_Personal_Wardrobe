@@ -12,8 +12,8 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
     <div
       className={cn(
         'relative mx-auto w-full max-w-md overflow-hidden rounded-xl',
-        'border border-white/10 bg-noir shadow-lg',
-        isVerified && 'ring-1 ring-green-500/40',
+        'border border-borderColor bg-background shadow-lg',
+        isVerified && 'ring-1 ring-magenta/40',
         className,
       )}
     >
@@ -32,8 +32,8 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
         />
 
         {!isReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-noir-elevated">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-champagne border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-[#150d22]">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-violet border-t-transparent" />
           </div>
         )}
 
@@ -48,15 +48,15 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
               className={cn(
                 'absolute inset-0 rounded-[50%] border-2 transition-colors duration-500',
                 isVerified
-                  ? 'border-green-500 shadow-lg shadow-green-500/20'
-                  : 'border-dashed border-champagne/60 animate-pulse-ring',
+                  ? 'border-magenta shadow-lg shadow-magenta/20'
+                  : 'border-dashed border-violet/60 animate-pulse-ring',
               )}
               aria-hidden
             />
             <div
               className={cn(
                 'absolute inset-2 rounded-[50%] border transition-colors duration-500',
-                isVerified ? 'border-green-500/40' : 'border-white/10',
+                isVerified ? 'border-magenta/40' : 'border-borderColor',
               )}
               aria-hidden
             />
@@ -68,7 +68,7 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
             <p
               className={cn(
                 'text-[10px] font-medium uppercase tracking-widest sm:text-xs',
-                isVerified ? 'text-green-400' : 'text-champagne/80',
+                isVerified ? 'text-magenta' : 'text-violet/80',
               )}
             >
               {isVerified ? 'Face Verified' : FRONT_CAPTURE_STEP.label}
@@ -86,7 +86,7 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
           <div
             className={cn(
               'pointer-events-none absolute left-4 right-4 top-[30%] h-px animate-scan bg-gradient-to-r from-transparent to-transparent',
-              isVerified ? 'via-green-500/50' : 'via-champagne/50',
+              isVerified ? 'via-magenta/50' : 'via-violet/50',
             )}
             aria-hidden
           />

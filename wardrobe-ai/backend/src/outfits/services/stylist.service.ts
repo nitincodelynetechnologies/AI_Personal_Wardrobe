@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   isStylistConnectionError,
@@ -22,6 +22,19 @@ interface StylistRecommendResponse {
   style_score: number;
 }
 
+export interface OutfitComboExclude {
+  top_id: string;
+  bottom_id: string;
+  footwear_id: string;
+}
+
+interface StylistErrorBody {
+  detail?: {
+    code?: string;
+    detail?: string;
+  };
+}
+
 @Injectable()
 export class StylistService {
   private readonly logger = new Logger(StylistService.name);
@@ -32,6 +45,7 @@ export class StylistService {
     items: ClothingItemRecord[],
     seasonTag: string,
     fashionDna?: FashionDnaPayload | null,
+    excludeCombos: OutfitComboExclude[] = [],
   ): Promise<OutfitGenerationSelection> {
     const baseUrl = this.configService.get<string>('stylist.serviceUrl');
     const timeoutMs = this.configService.get<number>('stylist.timeoutMs') ?? 15000;
@@ -58,6 +72,7 @@ export class StylistService {
             color_hex: item.color_hex,
             season: item.season,
           })),
+          exclude_combos: excludeCombos,
         }),
         signal: controller.signal,
       });
@@ -65,6 +80,32 @@ export class StylistService {
       if (!response.ok) {
         const errorBody = await response.text();
         this.logger.warn(`Stylist recommend error: ${response.status} ${errorBody}`);
+
+        let parsed: StylistErrorBody = {};
+        try {
+          parsed = JSON.parse(errorBody) as StylistErrorBody;
+        } catch {
+          // Keep default empty body when stylist does not return JSON.
+        }
+
+        const errorCode = parsed.detail?.code;
+        const errorDetail = parsed.detail?.detail;
+
+        if (response.status === 400) {
+          if (errorCode === 'NO_NEW_COMBINATIONS') {
+            throw new BadRequestException(
+              errorDetail ||
+                'No new outfit combinations available. Add more wardrobe items for variety.',
+            );
+          }
+
+          if (errorCode === 'INSUFFICIENT_WARDROBE') {
+            throw new BadRequestException(
+              errorDetail || 'Not enough items in wardrobe to generate an outfit.',
+            );
+          }
+        }
+
         throw new ServiceUnavailableException(STYLIST_OFFLINE_MESSAGE);
       }
 
@@ -78,7 +119,7 @@ export class StylistService {
         season_tag: seasonTag,
       };
     } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
+      if (error instanceof BadRequestException || error instanceof ServiceUnavailableException) {
         throw error;
       }
 

@@ -27,7 +27,7 @@ export function PermissionDeniedFallback({ error, permission, onRetry }) {
       </div>
 
       <div className="space-y-2">
-        <h2 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
+        <h2 className="font-playfair text-2xl font-semibold text-foreground sm:text-3xl">
           {isDenied ? 'Camera Access Required' : 'Camera Unavailable'}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -91,7 +91,7 @@ export function CameraPermissionGate({
             <Camera className="h-9 w-9 text-primary sm:h-10 sm:w-10" aria-hidden />
           </div>
           <div className="max-w-sm space-y-2">
-            <h2 className="font-display text-xl font-semibold sm:text-2xl">{promptCopy.title}</h2>
+            <h2 className="font-playfair text-xl font-semibold sm:text-2xl">{promptCopy.title}</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">{promptCopy.body}</p>
           </div>
           <Button onClick={onRequest} size="lg" className="min-w-[200px]">

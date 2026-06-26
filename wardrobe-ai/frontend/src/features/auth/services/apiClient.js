@@ -19,11 +19,15 @@ export function getNetworkErrorMessage(error) {
     return error.message;
   }
 
-  if (error instanceof TypeError && error.message === 'Failed to fetch') {
-    return NETWORK_ERROR_MESSAGE;
+  if (error instanceof ApiError && error.status === 503) {
+    return error.message;
   }
 
-  if (typeof error.message === 'string' && error.message.includes('Failed to fetch')) {
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'Server error while saving your profile. Ensure Docker is running (postgres + qdrant), then try again.';
+  }
+
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
     return NETWORK_ERROR_MESSAGE;
   }
 

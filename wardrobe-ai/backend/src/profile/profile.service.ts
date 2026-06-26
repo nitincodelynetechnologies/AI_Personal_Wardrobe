@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { POSTGRES_TABLES } from '../database/schema.registry';
 import { PostgresService } from '../database/postgres.service';
 import { FashionDnaService } from '../fashion-dna/fashion-dna.service';
@@ -31,12 +31,35 @@ export class ProfileService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<CombinedProfileResponse> {
-    await this.upsertProfile(userId, dto);
+    this.ensureDatabaseReady();
+    const existing = await this.findProfileByUserId(userId);
+    const merged = this.mergeProfile(existing, dto);
+    await this.upsertProfile(userId, merged);
     this.logger.log(`Profile updated for user ${userId}`);
     return this.getCombinedProfile(userId);
   }
 
+  mergeProfile(
+    existing: UserProfileRecord | null,
+    dto: UpdateProfileInput,
+  ): UpdateProfileInput {
+    const existingHeight =
+      existing?.height != null ? Number(existing.height) : undefined;
+    const existingWeight =
+      existing?.weight != null ? Number(existing.weight) : undefined;
+
+    return {
+      gender: dto.gender ?? existing?.gender ?? undefined,
+      age: dto.age ?? existing?.age ?? undefined,
+      height: dto.height ?? existingHeight,
+      weight: dto.weight ?? existingWeight,
+      body_type: dto.body_type ?? existing?.body_type ?? undefined,
+      skin_tone: dto.skin_tone ?? existing?.skin_tone ?? undefined,
+    };
+  }
+
   async updatePreferences(userId: string, dto: UpdatePreferencesDto) {
+    this.ensureDatabaseReady();
     const existing = await this.findPreferencesByUserId(userId);
     const merged = this.mergePreferences(existing, dto);
 
@@ -178,5 +201,13 @@ export class ProfileService {
     }
 
     return [];
+  }
+
+  private ensureDatabaseReady(): void {
+    if (!this.postgresService.isReady()) {
+      throw new ServiceUnavailableException(
+        'Database is offline. Start Docker Desktop, then run: docker compose up -d postgres',
+      );
+    }
   }
 }

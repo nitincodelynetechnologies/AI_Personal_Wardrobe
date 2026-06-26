@@ -26,7 +26,7 @@ export function RegistrationSuccess({ redirectTo = '/onboarding' }) {
       <div className="relative mb-6">
         <div
           className={cn(
-            'absolute inset-0 rounded-full bg-champagne/20 blur-2xl',
+            'absolute inset-0 rounded-full bg-violet/20 blur-2xl',
             'animate-pulse-ring',
           )}
           aria-hidden
@@ -34,15 +34,15 @@ export function RegistrationSuccess({ redirectTo = '/onboarding' }) {
         <div
           className={cn(
             'relative flex h-24 w-24 items-center justify-center rounded-full',
-            'border-2 border-champagne bg-gradient-to-br from-champagne/20 to-champagne/5',
+            'border-2 border-violet bg-gradient-to-br from-violet/20 to-violet/5',
             'animate-success-scale',
           )}
         >
-          <ShieldCheck className="h-12 w-12 text-champagne" strokeWidth={1.5} />
+          <ShieldCheck className="h-12 w-12 text-violet" strokeWidth={1.5} />
         </div>
 
         <Sparkles
-          className="absolute -right-2 -top-2 h-5 w-5 text-champagne-light animate-fade-up"
+          className="absolute -right-2 -top-2 h-5 w-5 text-violet-light animate-fade-up"
           style={{ animationDelay: '0.4s' }}
           aria-hidden
         />
@@ -54,7 +54,7 @@ export function RegistrationSuccess({ redirectTo = '/onboarding' }) {
           showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
         )}
       >
-        <h2 className="font-display text-2xl font-semibold text-gradient-gold sm:text-3xl">
+        <h2 className="font-playfair text-2xl font-semibold text-gradient-gold sm:text-3xl">
           Registration Complete
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">

@@ -1,6 +1,11 @@
+const path = require('path');
+
+const nextCacheDir = process.env.NEXT_DIST_DIR || 'node_modules/.cache/wardrobe-next';
+
 /** @type {import('next').NextConfig} */
 const backendApiUrl = process.env.BACKEND_API_URL || 'http://localhost:3001/api';
 const backendOrigin = backendApiUrl.replace(/\/api\/?$/, '') || 'http://localhost:3001';
+const vtonBackendUrl = process.env.VTON_BACKEND_URL || 'http://127.0.0.1:8000';
 
 function buildImageRemotePatterns() {
   const patterns = [
@@ -15,6 +20,11 @@ function buildImageRemotePatterns() {
       hostname: '127.0.0.1',
       port: '3001',
       pathname: '/uploads/**',
+    },
+    {
+      protocol: 'https',
+      hostname: 'images.unsplash.com',
+      pathname: '/**',
     },
   ];
 
@@ -41,7 +51,14 @@ function buildImageRemotePatterns() {
 
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname),
+  distDir: nextCacheDir,
   reactStrictMode: true,
+  transpilePackages: ['three'],
+  // IDM-VTON via /vton-api rewrite can take several minutes
+  experimental: {
+    proxyTimeout: 300000,
+  },
   images: {
     formats: ['image/webp'],
     remotePatterns: buildImageRemotePatterns(),
@@ -56,9 +73,19 @@ const nextConfig = {
         source: '/uploads/:path*',
         destination: `${backendOrigin}/uploads/:path*`,
       },
+      {
+        source: '/vton-api/:path*',
+        destination: `${vtonBackendUrl}/:path*`,
+      },
     ];
   },
   webpack: (config, { dev }) => {
+    config.output = {
+      ...config.output,
+      // OneDrive + large Three.js chunks can exceed the default dev timeout.
+      chunkLoadTimeout: 120000,
+    };
+
     if (dev) {
       config.watchOptions = {
         ...config.watchOptions,
@@ -66,6 +93,11 @@ const nextConfig = {
       };
     }
     return config;
+  },
+  devIndicators: {
+    appIsrStatus: false,
+    buildActivity: false,
+    position: 'bottom-right',
   },
 };
 

@@ -8,6 +8,7 @@ Python microservices for ML/AI workloads. Each service is independently deployab
 |----------------|------|--------------------------------------|
 | face-service   | 8000 | Face embedding & liveness detection  |
 | stylist-service| 8001 | Clothing analysis & outfit recommendations |
+| vton-service   | 8002 | IDM-VTON virtual try-on (Gradio client) |
 
 ## Planned Structure
 

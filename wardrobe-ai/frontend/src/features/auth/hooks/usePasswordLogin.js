@@ -2,15 +2,13 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { loginWithPassword } from '@/features/auth/services/authService';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { establishAuthenticatedSession } from '@/features/auth/utils/sessionLifecycle';
 
 export function usePasswordLogin() {
-  const completeFaceLogin = useAuthStore((s) => s.completeFaceLogin);
-
   return useMutation({
     mutationFn: loginWithPassword,
-    onSuccess: (data) => {
-      completeFaceLogin({
+    onSuccess: async (data) => {
+      await establishAuthenticatedSession({
         user: data.user,
         accessToken: data.jwt_token,
       });

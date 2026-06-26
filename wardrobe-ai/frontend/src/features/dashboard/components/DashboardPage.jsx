@@ -1,111 +1,132 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/features/dashboard/components/DashboardLayout';
-import { DashboardGreeting } from '@/features/dashboard/components/DashboardGreeting';
-import { FashionDNACard } from '@/features/dashboard/components/FashionDNACard';
-import { RecentWardrobeWidget } from '@/features/dashboard/components/RecentWardrobeWidget';
-import { FeaturedOutfitWidget } from '@/features/dashboard/components/FeaturedOutfitWidget';
-import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton';
-import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
-import {
-  getLatestOutfit,
-  getRecentWardrobeItems,
-} from '@/features/dashboard/utils/dashboardUtils';
-import { useDashboardStore } from '@/features/dashboard/store/useDashboardStore';
+import { DashboardTopBar } from '@/features/dashboard/components/DashboardTopBar';
+import { CuratedForYouSection } from '@/features/dashboard/components/CuratedForYouSection';
+import { TrendingThisWeek } from '@/features/dashboard/components/TrendingThisWeek';
+import { enrichProductWithLook } from '@/features/dashboard/constants/dashboardStyleLooks';
 import { getNetworkErrorMessage } from '@/features/auth/services/apiClient';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useProfileStore } from '@/features/profile/store/useProfileStore';
+import { useOnboardingGuard } from '@/features/profile/hooks/useOnboardingGuard';
+import { useWishlistStore } from '@/features/commerce/store/useWishlistStore';
+import { useWardrobeStore } from '@/features/wardrobe/store/useWardrobeStore';
+import { useProducts } from '@/features/catalog/hooks/useProducts';
+import { PersonalizedHero } from '@/features/recommendations/components/PersonalizedHero';
+import { RECOMMENDATION_TYPES } from '@/features/recommendations/constants/recommendationCatalog';
+import { getRecommendations } from '@/features/recommendations/utils/getRecommendations';
+import { enrichProductWithGlb } from '@/features/catalog/constants/garmentModels';
+import { TryOnModalDynamic } from '@/features/try-on/components/TryOnModalDynamic';
+import { preloadVirtualTryOnModal } from '@/features/try-on/loadVirtualTryOnModal';
+import { useAuthUser } from '@/features/auth/hooks/useAuthUser';
 
 export function DashboardPage() {
-  const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const onboardingComplete = useProfileStore((state) => state.onboardingComplete);
-  const cachedFashionDna = useProfileStore((state) => state.fashionDna);
-  const cachedProfile = useProfileStore((state) => state.profile);
-  const cachedPreferences = useProfileStore((state) => state.preferences);
-  const cachedWardrobeItems = useDashboardStore((state) => state.wardrobeItems);
-  const cachedOutfits = useDashboardStore((state) => state.outfits);
+  const {
+    displayName,
+    bodyType,
+    fashionStyle,
+    preferredColors: ownedPreferredColors,
+  } = useAuthUser();
+  const wishlistItems = useWishlistStore((state) => state.items);
+  const wardrobeItems = useWardrobeStore((state) => state.items);
 
-  const [hydrated, setHydrated] = useState(false);
-  const { data, isLoading, isFetching, isError, error } = useDashboard();
+  const { ready } = useOnboardingGuard();
+  const { data: catalogProducts = [], isLoading, isError, error } = useProducts('All');
+
+  const [tryOnProduct, setTryOnProduct] = useState(null);
+  const [tryOnOpen, setTryOnOpen] = useState(false);
 
   useEffect(() => {
-    useAuthStore.persist.rehydrate();
-    useProfileStore.persist.rehydrate();
-    setHydrated(true);
+    const timer = window.setTimeout(() => {
+      void preloadVirtualTryOnModal();
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
+  const resolvedBodyType = bodyType ?? 'athletic';
+  const preferredColors =
+    ownedPreferredColors.length > 0 ? ownedPreferredColors : ['navy', 'black', 'olive'];
 
-    if (!isAuthenticated && !accessToken) {
-      router.replace('/login/face');
-      return;
+  const recommendationContext = useMemo(
+    () => ({
+      bodyType: resolvedBodyType,
+      preferredColors,
+      wishlistProductIds: wishlistItems.map((item) => item.id),
+      closetProductIds: wardrobeItems.map((item) => item.id),
+      limit: 4,
+    }),
+    [resolvedBodyType, preferredColors, wishlistItems, wardrobeItems],
+  );
+
+  const curatedProducts = useMemo(() => {
+    const products = getRecommendations(
+      RECOMMENDATION_TYPES.BODY,
+      recommendationContext,
+      catalogProducts,
+    );
+    return products.map((product, index) => enrichProductWithLook(product, index));
+  }, [recommendationContext, catalogProducts]);
+
+  const handleTryOn = useCallback((product) => {
+    void preloadVirtualTryOnModal();
+    setTryOnProduct(enrichProductWithGlb(product));
+    setTryOnOpen(true);
+  }, []);
+
+  const handleTryOnOpenChange = useCallback((open) => {
+    setTryOnOpen(open);
+    if (!open) setTryOnProduct(null);
+  }, []);
+
+  const handleHeroTryOn = useCallback(() => {
+    if (curatedProducts[0]) {
+      handleTryOn(curatedProducts[0]);
     }
+  }, [curatedProducts, handleTryOn]);
 
-    if (!onboardingComplete) {
-      router.replace('/onboarding');
-    }
-  }, [hydrated, isAuthenticated, accessToken, onboardingComplete, router]);
-
-  if (!hydrated) {
+  if (!ready) {
     return null;
   }
 
-  const profile = data?.profile ?? cachedProfile;
-  const preferences = data?.preferences ?? cachedPreferences;
-  const fashionDna = data?.fashionDna ?? cachedFashionDna;
-  const wardrobeItems = data?.wardrobeItems ?? cachedWardrobeItems;
-  const outfits = data?.outfits ?? cachedOutfits;
-  const recentItems = getRecentWardrobeItems(wardrobeItems);
-  const latestOutfit = getLatestOutfit(outfits);
-  const showInitialSkeleton =
-    isLoading && !data && !cachedFashionDna && !wardrobeItems.length && !outfits.length;
-  const widgetsLoading = (isLoading || isFetching) && !recentItems.length && !latestOutfit;
-
   return (
     <DashboardLayout>
-      {showInitialSkeleton ? (
-        <DashboardSkeleton />
-      ) : (
-        <div className="mx-auto max-w-6xl space-y-8">
-          <DashboardGreeting user={user} profile={profile} preferences={preferences} />
+      <div className="mx-auto max-w-7xl space-y-10">
+        <DashboardTopBar />
 
-          {isError && (
-            <Alert variant="destructive" role="alert">
-              {getNetworkErrorMessage(error)}
-              <div className="mt-3">
-                <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-                  Retry
-                </Button>
-              </div>
-            </Alert>
-          )}
+        <PersonalizedHero
+          displayName={displayName}
+          bodyType={resolvedBodyType}
+          fashionStyle={fashionStyle}
+          preferredColors={preferredColors}
+          onTryOn={handleHeroTryOn}
+        />
 
-          {!onboardingComplete && (
-            <Alert>
-              Complete your style profile to unlock full Fashion DNA insights.{' '}
-              <Link href="/onboarding" className="font-medium text-champagne underline">
-                Go to onboarding
-              </Link>
-            </Alert>
-          )}
+        {isError && (
+          <Alert variant="destructive" role="alert">
+            {getNetworkErrorMessage(error)}
+          </Alert>
+        )}
 
-          <FashionDNACard fashionDna={fashionDna} preferences={preferences} />
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <RecentWardrobeWidget items={recentItems} isLoading={widgetsLoading} />
-            <FeaturedOutfitWidget outfit={latestOutfit} isLoading={widgetsLoading} />
+        {isLoading && catalogProducts.length === 0 ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-600 dark:text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Curating your personalized feed...
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <CuratedForYouSection products={curatedProducts} onTryOn={handleTryOn} />
+            <TrendingThisWeek onTryOn={handleTryOn} />
+          </>
+        )}
+      </div>
+
+      <TryOnModalDynamic
+        open={tryOnOpen}
+        onOpenChange={handleTryOnOpenChange}
+        product={tryOnProduct}
+      />
     </DashboardLayout>
   );
 }

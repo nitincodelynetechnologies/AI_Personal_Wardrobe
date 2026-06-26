@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 
 export function WardrobeEmptyState({ onAddClick, hasFilter }) {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-white/10 bg-noir-elevated/20 px-6 py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-champagne/40 bg-champagne/5">
-        <Shirt className="h-7 w-7 text-champagne/70" />
+    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-borderColor bg-white/20 dark:bg-[#150d22]/20 px-6 py-16 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-violet/40 bg-violet/5">
+        <Shirt className="h-7 w-7 text-violet/70" />
       </div>
       <div className="max-w-sm space-y-1">
-        <p className="font-display text-lg font-semibold">
+        <p className="font-playfair text-lg font-semibold">
           {hasFilter ? 'No items in this category' : 'Your wardrobe is empty'}
         </p>
         <p className="text-sm text-muted-foreground">

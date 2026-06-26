@@ -1,239 +1,339 @@
 # AI Personal Wardrobe & Virtual Fashion Platform
 ## Technology Stack Reference
 
-**Document version:** 1.0  
-**Date:** June 18, 2026  
-**Project:** AI Personal Wardrobe Platform (`wardrobe-ai/`)
+**Document version:** 2.0  
+**Date:** June 22, 2026  
+**Project:** `wardrobe-ai/` monorepo
 
 ---
 
 ## 1. Executive Summary
 
-This platform is a **multi-service, Docker-first** application for AI-powered wardrobe management, face authentication, outfit styling, and virtual fashion experiences. It combines a modern JavaScript web stack with Python microservices for machine learning workloads, backed by PostgreSQL for relational data and Qdrant for vector search.
+This platform is a **multi-service, Docker-first** application for AI-powered wardrobe management, face authentication, outfit styling, **3D virtual try-on**, e-commerce catalog flows, and social sharing. It combines a modern JavaScript web stack with Python microservices for machine learning workloads, backed by **PostgreSQL** for relational data and **Qdrant** for vector search.
 
-The architecture separates concerns deliberately: the **frontend** handles user experience, the **NestJS backend** acts as an API gateway and orchestrator, and **Python FastAPI services** run CPU/GPU-heavy AI tasks (face embeddings, clothing analysis, background removal).
-
----
-
-## 2. Languages Used
-
-| Language | Where Used | Why |
-|----------|------------|-----|
-| **TypeScript** | Backend (`backend/src/`) | Strong typing, NestJS ecosystem, safer API contracts, easier refactoring at scale |
-| **JavaScript (JSX)** | Frontend (`frontend/src/`) | Next.js and React convention; fast iteration for UI features |
-| **Python 3** | AI services (`ai-services/face-service`, `ai-services/stylist-service`) | Dominant language for ML/AI; rich libraries (InsightFace, PyTorch, rembg, OpenCV) |
-| **SQL** | Database migrations & init scripts | PostgreSQL schema, indexes, and relational integrity |
-| **YAML / Shell / PowerShell** | Docker Compose, deployment scripts | Infrastructure-as-code for reproducible local and containerized runs |
+| Layer | Technology | Role |
+|-------|------------|------|
+| **Frontend** | Next.js 15 + React 19 | User interface, 3D viewer, camera auth |
+| **API Gateway** | NestJS 10 + TypeScript | REST API, auth, orchestration |
+| **AI Services** | FastAPI + Python | Face embeddings, clothing analysis |
+| **Databases** | PostgreSQL 16 + Qdrant | Relational data + vector similarity |
+| **Infrastructure** | Docker Compose | Local & production container stack |
 
 ---
 
-## 3. Architecture Overview
+## 2. Architecture Overview
 
 ```
 Browser (User)
       │
       ▼
-┌─────────────────────┐
-│  Frontend (Next.js) │  Port 3003 (dev) / 3000 (Docker)
-└──────────┬──────────┘
-           │ REST / JWT
-           ▼
-┌─────────────────────┐
-│  Backend (NestJS)   │  Port 3001
-└──┬────────┬────┬────┘
-   │        │    │
-   ▼        ▼    ▼
-Postgres  Qdrant  Python AI Services
-5432      6333    8000 (Face) / 8001 (Stylist)
+┌─────────────────────────┐
+│  Frontend (Next.js 15)  │  Port 3003 (dev) / 3000 (Docker)
+│  React 19 · Three.js    │
+└───────────┬─────────────┘
+            │ REST + JWT  (/api → backend proxy)
+            ▼
+┌─────────────────────────┐
+│  Backend (NestJS 10)    │  Port 3001
+└──┬──────────┬──────┬────┘
+   │          │      │
+   ▼          ▼      ▼
+Postgres   Qdrant   Python AI Services
+5432       6333     8000 Face / 8001 Stylist
 ```
 
-**Design principles:**
-- **Docker-first** — single `docker-compose.yml` for six core services
-- **Service discovery** — internal Docker network (`wardrobe-network`)
-- **Graceful degradation** — backend falls back when AI services are unavailable
-- **Local-first** — no cloud dependency required for development
+**Six core Docker services:** `frontend`, `backend`, `postgres`, `qdrant`, `face-service`, `stylist-service` — all on internal network `wardrobe-network`.
 
 ---
 
-## 4. Frontend Stack
+## 3. Languages & Runtimes
+
+| Language / Runtime | Where Used | Purpose |
+|--------------------|------------|---------|
+| **TypeScript 5.7** | `backend/src/` | Type-safe API, DTOs, services |
+| **JavaScript (JSX)** | `frontend/src/` | Next.js App Router UI |
+| **Python 3** | `ai-services/` | ML inference (InsightFace, PyTorch, rembg) |
+| **SQL** | `database/postgres/` | Schema, migrations, seed data |
+| **YAML / Shell / PowerShell** | `docker-compose.yml`, `scripts/` | Infrastructure & automation |
+
+---
+
+## 4. Frontend Stack (`frontend/`)
 
 ### 4.1 Core Framework
 
-| Technology | Version | Purpose | Why Chosen |
-|------------|---------|---------|------------|
-| **Next.js** | 15.x | React meta-framework | App Router, SSR/SSG, API rewrites to backend, optimized image delivery, production-ready routing |
-| **React** | 19.x | UI library | Component model, large ecosystem, team familiarity |
-| **Tailwind CSS** | 3.4.x | Utility-first styling | Rapid UI development, consistent design tokens, small bundle with purging |
+| Technology | Version | Used For |
+|------------|---------|----------|
+| **Next.js** | 15.x | App Router, SSR, API rewrites to backend, image optimization, code splitting |
+| **React** | 19.x | Component-based UI across all features |
+| **Tailwind CSS** | 3.4.x | Utility styling — Deep Obsidian + Vivid Magenta design system |
+| **PostCSS + Autoprefixer** | — | CSS processing pipeline |
 
-### 4.2 UI Components & Design
+### 4.2 UI Components & Design System
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **Radix UI** (`@radix-ui/react-*`) | Accessible primitives (dialogs, tabs, select, progress) | Unstyled, WAI-ARIA compliant building blocks |
-| **ShadCN pattern** (CVA + clsx + tailwind-merge) | Composable UI components | Copy-paste ownership, full customization, no opaque black-box UI kit |
-| **Lucide React** | Icons | Lightweight, consistent icon set |
-| **next-themes** | Dark/light mode | Seamless theme switching with SSR support |
+| Library | Used For |
+|---------|----------|
+| **Radix UI** (`dialog`, `tabs`, `select`, `alert-dialog`, `progress`, `slot`) | Accessible, unstyled primitives for modals, forms, navigation |
+| **class-variance-authority (CVA)** | Variant-based button/badge styling |
+| **clsx** + **tailwind-merge** | Conditional + deduplicated Tailwind class names (ShadCN pattern) |
+| **Lucide React** | Icons across nav, catalog, auth, admin, share menu |
+| **next-themes** | Dark/light mode with SSR-safe theme switching |
+| **tailwindcss-animate** | Enter/exit animations for modals and menus |
 
-### 4.3 State & Data Fetching
+### 4.3 State Management & Data Fetching
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **Zustand** | Global client state (auth, wardrobe cache) | Minimal boilerplate, no Provider nesting, simple API |
-| **TanStack Query (React Query)** | Server state, caching, mutations | Automatic refetch, optimistic updates, loading/error states for API calls |
-| **React Hook Form** | Form handling | Performance (uncontrolled inputs), validation integration |
-| **Zod** | Schema validation | Type-safe validation shared with form resolvers |
+| Library | Used For |
+|---------|----------|
+| **Zustand** | Client state — auth session, cart, wishlist, face studio, toasts, orders |
+| **TanStack React Query** | Server state — wardrobe, outfits, profile, catalog products, dashboard |
+| **React Hook Form** | Login, registration, profile, settings forms |
+| **Zod** + **@hookform/resolvers** | Schema validation for forms and onboarding |
 
-### 4.4 Face Auth (Client-Side)
+### 4.4 3D Virtual Try-On
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **@vladmandic/face-api** | Browser face detection | Client-side camera preview, liveness hints before server registration |
-| **TensorFlow.js** (core + WebGL backend) | ML inference in browser | Hardware-accelerated face detection without server round-trips for preview |
+| Library | Used For |
+|---------|----------|
+| **Three.js** | WebGL 3D rendering engine |
+| **@react-three/fiber** | React renderer for Three.js scenes |
+| **@react-three/drei** | `useGLTF`, `Clone`, camera controls, lighting helpers |
+| **GLB models** (`public/models/`) | Shirt, jacket, blazer garment meshes on 3D mannequin |
+| **Custom `ThreeDViewer`** | Garment fitting, face overlay from Face Studio, 360° spin |
 
-### 4.5 Media & Performance
+### 4.5 Face Authentication (Client)
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **browser-image-compression** | Upload compression | Reduces payload size (~500KB, WebP, max 1024px) before upload |
-| **Next.js `<Image>`** | Optimized images | Lazy loading, responsive sizes, WebP/AVIF formats |
+| Library | Used For |
+|---------|----------|
+| **@vladmandic/face-api** | Browser face detection during camera capture |
+| **TensorFlow.js** (core + WebGL backend) | Hardware-accelerated client-side face inference |
+| **browser-image-compression** | Compress captures before upload (~WebP, max dimension) |
+| **MediaDevices API** | Camera stream for registration and face login |
+
+### 4.6 Charts & Admin
+
+| Library | Used For |
+|---------|----------|
+| **Recharts** | Admin console revenue donut, trend charts, product metrics |
+
+### 4.7 Commerce & Social
+
+| Feature | Technology | Used For |
+|---------|------------|----------|
+| Cart / Wishlist | Zustand stores | Add-to-cart, save items, drawer UI |
+| Checkout | React + Zustand | Order summary, payment method selection |
+| Social Sharing | Web Share API + fallback modal | Share 3D try-on to Instagram, WhatsApp, Facebook, Pinterest |
+
+### 4.8 Frontend Feature Modules
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| **auth** | `features/auth/` | Face + email login, registration, JWT session |
+| **landing** | `features/landing/` | Marketing homepage |
+| **dashboard** | `features/dashboard/` | Personalized home, recommendations, Fashion DNA |
+| **wardrobe** | `features/wardrobe/` | Digital closet upload, grid, filters |
+| **outfits** | `features/outfits/` | AI-generated outfit cards, feedback |
+| **catalog** | `features/catalog/` | Product browse, filters, product cards |
+| **try-on** | `features/try-on/` | Virtual Try-On modal, 3D viewer, share menu |
+| **face-studio** | `features/face-studio/` | User face capture for 3D avatar overlay |
+| **closet** | `features/closet/` | Style profile, polaroid wardrobe view |
+| **commerce** | `features/commerce/` | Cart drawer, wishlist drawer |
+| **checkout** | `features/checkout/` | Checkout flow |
+| **admin** | `features/admin/` | Admin console (RBAC-gated) |
+| **profile** | `features/profile/` | Onboarding, preferences |
+| **settings** | `features/settings/` | Account settings |
+| **recommendations** | `features/recommendations/` | Curated style carousels |
 
 ---
 
-## 5. Backend Stack (API Gateway)
+## 5. Backend Stack (`backend/`)
 
 ### 5.1 Core Framework
 
-| Technology | Version | Purpose | Why Chosen |
-|------------|---------|---------|------------|
-| **NestJS** | 10.x | Node.js API framework | Modular architecture (modules/controllers/services), DI, enterprise patterns |
-| **Express** (via `@nestjs/platform-express`) | — | HTTP server | Mature, multipart uploads, wide middleware support |
-| **TypeScript** | 5.7.x | Language | Type safety across DTOs, services, and database layers |
+| Technology | Version | Used For |
+|------------|---------|----------|
+| **NestJS** | 10.x | Modular API — controllers, services, guards, DI |
+| **Express** (via `@nestjs/platform-express`) | — | HTTP server, multipart file uploads |
+| **TypeScript** | 5.7.x | End-to-end type safety |
+| **RxJS** | 7.x | Async streams in NestJS internals |
 
 ### 5.2 Authentication & Security
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **@nestjs/jwt** + **Passport** + **passport-jwt** | JWT auth | Stateless sessions, standard guard pattern in NestJS |
-| **bcryptjs** | Password hashing | Secure credential storage for email/password fallback |
-| **class-validator** + **class-transformer** | Request validation | Decorator-based DTO validation aligned with NestJS pipes |
+| Library | Used For |
+|---------|----------|
+| **@nestjs/jwt** | Issue and verify JWT access tokens |
+| **Passport** + **passport-jwt** | JWT strategy and route guards |
+| **bcryptjs** | Hash passwords for email/password auth |
+| **class-validator** + **class-transformer** | DTO validation via NestJS pipes |
 
-### 5.3 API Documentation
+### 5.3 API & Documentation
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **@nestjs/swagger** | OpenAPI / Swagger UI | Auto-generated docs at `/api/docs` for testing and integration |
+| Library | Used For |
+|---------|----------|
+| **@nestjs/swagger** | OpenAPI docs at `/api/docs` |
+| **@nestjs/config** | Environment-based configuration |
 
 ### 5.4 Data Access
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **pg** | PostgreSQL client | Native driver, connection pooling, raw SQL for migrations |
-| **@qdrant/js-client-rest** | Qdrant vector DB client | Face embedding similarity search, clothing vector storage |
+| Library | Used For |
+|---------|----------|
+| **pg** | PostgreSQL queries (users, wardrobe, outfits, products) |
+| **@qdrant/js-client-rest** | Face vector search, fashion DNA / clothing embeddings |
 
-### 5.5 Testing
+### 5.5 Backend Modules
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **Jest** + **ts-jest** | Unit/integration tests | NestJS default, fast feedback on service logic |
+| Module | Used For |
+|--------|----------|
+| **AuthModule** | Face register/login, email auth, JWT |
+| **ProfileModule** | User profile, onboarding, preferences |
+| **FashionDnaModule** | Style DNA scoring and vectors |
+| **WardrobeModule** | Clothing item CRUD, image uploads |
+| **OutfitsModule** | Outfit generation, stylist orchestration |
+| **ProductsModule** | E-commerce catalog API |
+| **TryOnModule** | Virtual try-on session requests |
+| **ChatModule** | AI stylist chat endpoints |
+| **DatabaseModule** | Postgres connection pool |
+
+### 5.6 Testing
+
+| Library | Used For |
+|---------|----------|
+| **Jest** + **ts-jest** | Unit tests for services (outfits, wardrobe, products) |
+| **@nestjs/testing** | NestJS test module harness |
 
 ---
 
-## 6. AI Services (Python Microservices)
+## 6. AI Services (`ai-services/`)
 
-### 6.1 Face Service (Port 8000)
+### 6.1 Face Service — Port 8000
 
-**Role:** Generate 512-dimensional face embeddings for registration and login.
+**Purpose:** 512-dimensional ArcFace embeddings for face registration and login.
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **FastAPI** | HTTP API framework | Async, automatic OpenAPI, fast development |
-| **Uvicorn** | ASGI server | Production-grade Python web server |
-| **Pydantic** | Request/response schemas | Validation and serialization |
-| **InsightFace** | Face recognition | State-of-the-art ArcFace embeddings (512-dim) |
-| **ONNX Runtime** | Model inference | Efficient CPU inference for InsightFace models |
-| **OpenCV (headless)** | Image preprocessing | Face alignment, resize, color conversion |
-| **NumPy** + **Pillow** | Array & image handling | Standard Python imaging stack |
+| Library | Used For |
+|---------|----------|
+| **FastAPI** | REST API (`/v1/face/embed`, `/health`) |
+| **Uvicorn** | ASGI production server |
+| **Pydantic** | Request/response validation |
+| **InsightFace** | State-of-the-art face recognition (buffalo_l model) |
+| **ONNX Runtime** | Efficient CPU inference for face models |
+| **OpenCV (headless)** | Image preprocessing, alignment |
+| **NumPy** + **Pillow** | Array and image handling |
 
-**Why a separate service:** Face models are heavy (~100MB+), Python has the best InsightFace support, and isolating ML keeps the NestJS gateway lightweight and restartable without reloading models.
+**Why separate service:** Heavy ML models (~100MB+), best Python ecosystem support, isolated from Node restarts.
 
-### 6.2 Stylist Service (Port 8001)
+### 6.2 Stylist Service — Port 8001
 
-**Role:** Clothing image analysis, outfit recommendations, background removal.
+**Purpose:** Clothing image analysis, outfit recommendations, background removal.
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **FastAPI** + **Uvicorn** + **Pydantic** | API layer | Same stack as face-service for consistency |
-| **PyTorch** + **torchvision** | Deep learning | MobileNetV2 for category detection and 512-dim clothing embeddings |
-| **scikit-learn** | K-Means clustering | Dominant color extraction from wardrobe images |
-| **rembg** (U-2-Net) | Background removal | Clean product-style wardrobe photos on upload |
-| **OpenCV** + **Pillow** + **NumPy** | Image processing | Preprocessing pipelines |
-| **pytest** + **httpx** | Testing | Service-level API tests |
+| Library | Used For |
+|---------|----------|
+| **FastAPI** + **Uvicorn** + **Pydantic** | HTTP API layer |
+| **PyTorch** + **torchvision** | MobileNetV2 category detection, 512-dim clothing embeddings |
+| **scikit-learn** | K-Means dominant color extraction |
+| **rembg** (U-2-Net) | Automatic background removal on wardrobe uploads |
+| **OpenCV** + **Pillow** + **NumPy** | Image preprocessing pipelines |
+| **pytest** + **httpx** | API integration tests |
 
-**Why PyTorch here:** Pretrained vision models (MobileNetV2) integrate naturally with torchvision; rembg depends on ONNX/PyTorch ecosystem for segmentation.
+**Key endpoints:** `/v1/clothing/analyze`, `/v1/outfits/recommend`, `/health`
 
 ---
 
 ## 7. Databases & Storage
 
-| Technology | Port | Role | Why |
-|------------|------|------|-----|
-| **PostgreSQL 15+** | 5432 | Users, wardrobe items, outfits, metadata | ACID compliance, JSON support, mature relational model |
-| **Qdrant** | 6333 | Vector similarity search | Face login matching, optional clothing embeddings; purpose-built for vectors |
-| **Local filesystem / Docker volume** | — | Uploaded wardrobe images | Simple MVP storage; backend serves files from `uploads/` volume |
+| Technology | Version | Port | Used For |
+|------------|---------|------|----------|
+| **PostgreSQL** | 16 (Alpine) | 5432 | Users, profiles, wardrobe items, outfits, products catalog |
+| **Qdrant** | 1.12.x | 6333 | Face vectors, fashion DNA, recommendation & clothing embeddings |
+| **Docker volume** | — | — | `wardrobe-uploads-data` — wardrobe image files |
+
+### PostgreSQL Migrations
+
+| Migration | Purpose |
+|-----------|---------|
+| `001` | Users table |
+| `002` | User profile tables |
+| `003` | Clothing items |
+| `004` | Outfits |
+| `005` | Products catalog |
+| `006` | Catalog refresh seed |
+| `007` | AI render image column |
+
+### Qdrant Collections
+
+| Collection | Purpose |
+|------------|---------|
+| `users_face_vectors` | Face login similarity search |
+| `fashion_dna_vectors` | Style DNA embeddings |
+| `recommendation_vectors` | Recommendation engine |
+| `clothing_item_vectors` | Wardrobe item similarity |
 
 ---
 
-## 8. DevOps & Infrastructure
+## 8. DevOps & Tooling
 
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| **Docker** + **Docker Compose** | Container orchestration | Reproducible 6-service stack on any machine |
-| **Multi-stage Dockerfiles** | Backend & frontend images | Smaller production images, cached build layers |
-| **`.env` configuration** | Secrets & ports | Twelve-factor app pattern; never commit secrets |
-| **start-platform.sh / start-platform.ps1** | One-command startup | Migrations, Qdrant init, compose up |
+| Technology | Used For |
+|------------|----------|
+| **Docker** + **Docker Compose** | 6-service reproducible stack |
+| **Multi-stage Dockerfiles** | Optimized frontend & backend images |
+| **`.env` / `.env.local`** | Secrets, ports, admin emails (never committed) |
+| **ESLint** + **Prettier** | Linting and code formatting |
+| **knip** | Unused dependency detection (frontend) |
 
----
+### NPM Scripts (root)
 
-## 9. Service URLs (Local Development)
-
-| Service | URL |
-|---------|-----|
-| Frontend (npm dev) | http://localhost:3003 |
-| Frontend (Docker) | http://localhost:3000 |
-| Backend API | http://localhost:3001/api |
-| Swagger UI | http://localhost:3001/api/docs |
-| Face AI Service | http://localhost:8000 |
-| Stylist AI Service | http://localhost:8001 |
-| PostgreSQL | localhost:5432 |
-| Qdrant Dashboard | http://localhost:6333 |
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Start frontend dev server (port 3003) |
+| `npm run dev:backend` | Start NestJS in watch mode |
+| `npm run infra:up` | `docker compose up -d` |
+| `npm run db:migrate` | Run PostgreSQL migrations |
 
 ---
 
-## 10. Rationale Summary
+## 9. Service URLs
 
-| Decision | Alternatives Considered | Why This Stack Won |
-|----------|-------------------------|-------------------|
-| Next.js over plain React SPA | Vite + React, Remix | Built-in routing, image optimization, API rewrites, SSR for auth flows |
-| NestJS over Express raw | Fastify, Hono | Structured modules, guards, Swagger, DI — scales with feature growth |
-| Python microservices for AI | Node TensorFlow.js server-side | Better ML library support (InsightFace, rembg, PyTorch) |
-| PostgreSQL + Qdrant | MongoDB, Pinecone | Postgres for relational integrity; Qdrant for fast local vector search without cloud |
-| Zustand + React Query | Redux, SWR | Less boilerplate; clear split between client vs server state |
-| Docker Compose | Kubernetes (now) | Appropriate for local dev and MVP; K8s deferred to later phase |
-| Radix + Tailwind (ShadCN) | Material UI, Chakra | Full styling control, accessibility, no heavy theme lock-in |
+| Service | Dev URL | Docker URL |
+|---------|---------|------------|
+| Frontend | http://localhost:3003 | http://localhost:3000 |
+| Backend API | http://localhost:3001/api | http://localhost:3001/api |
+| Swagger UI | http://localhost:3001/api/docs | same |
+| Face AI | http://localhost:8000 | http://face-service:8000 |
+| Stylist AI | http://localhost:8001 | http://stylist-service:8001 |
+| PostgreSQL | localhost:5432 | postgres:5432 |
+| Qdrant | http://localhost:6333 | qdrant:6333 |
 
 ---
 
-## 11. Feature-to-Technology Map
+## 10. Feature → Technology Map
 
 | Feature | Primary Technologies |
 |---------|---------------------|
-| Face registration & login | face-api.js (browser), InsightFace (server), Qdrant, JWT |
-| Wardrobe upload & catalog | Next.js, NestJS, PostgreSQL, stylist-service analysis |
-| Background removal | rembg + U-2-Net (stylist-service) |
-| Outfit generation & feedback | NestJS outfits module, stylist recommendation engine |
-| Image optimization | browser-image-compression, Next.js Image |
-| Style Studio UI | React, Radix UI, TanStack Query, optimistic mutations |
+| Face registration & login | face-api.js, InsightFace, Qdrant, JWT, NestJS Auth |
+| Wardrobe upload | Next.js, NestJS, PostgreSQL, stylist-service, rembg |
+| Outfit recommendations | stylist-service PyTorch, NestJS OutfitsModule, React Query |
+| 3D Virtual Try-On | Three.js, R3F, drei, GLB models, Face Studio overlay |
+| Product catalog | NestJS ProductsModule, PostgreSQL, Next.js catalog feature |
+| Cart & checkout | Zustand, React, local order state |
+| Admin console | Recharts, RBAC (`NEXT_PUBLIC_ADMIN_EMAILS`), guarded routes |
+| Social sharing | Web Share API, ShareMenu modal, clipboard API |
+| Fashion DNA / Closet | Qdrant vectors, dashboard widgets, radial score UI |
+| AI stylist chat | NestJS ChatModule, frontend chat UI |
+| Landing page | Next.js static sections, Playfair + mono typography |
+| Image optimization | Next.js `<Image>`, browser-image-compression, WebP |
 
 ---
 
-*Generated for the AI Personal Wardrobe & Virtual Fashion Platform project.*
+## 11. Design Decisions (Why This Stack)
+
+| Decision | Why |
+|----------|-----|
+| **Next.js** over plain React SPA | Built-in routing, image optimization, API proxy rewrites |
+| **NestJS** over raw Express | Modular architecture, guards, Swagger, scales with features |
+| **Python microservices for AI** | Best ML libraries (InsightFace, PyTorch, rembg) |
+| **PostgreSQL + Qdrant** | Relational integrity + fast local vector search without cloud |
+| **Zustand + React Query** | Minimal boilerplate; clear client vs server state split |
+| **Three.js via R3F** | React-friendly 3D for virtual try-on in browser |
+| **Docker Compose** | Appropriate for local dev and MVP deployment |
+| **Radix + Tailwind** | Accessible primitives with full design control |
+
+---
+
+*AI Personal Wardrobe & Virtual Fashion Platform — Technology Stack Reference v2.0*

@@ -9,15 +9,15 @@ export function DashboardGreeting({ user, profile, preferences }) {
   const bodyType = profile?.body_type;
 
   return (
-    <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="animate-fade-in-view flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <Avatar className="h-14 w-14">
           <AvatarFallback className="text-lg">{getUserInitials(user)}</AvatarFallback>
         </Avatar>
 
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-champagne">Welcome back</p>
-          <h1 className="font-display text-2xl font-semibold sm:text-3xl">{displayName}</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-violet">Welcome back</p>
+          <h1 className="font-playfair text-2xl font-semibold sm:text-3xl">{displayName}</h1>
           <p className="text-sm text-muted-foreground">
             Your AI-powered fashion command center is ready.
           </p>

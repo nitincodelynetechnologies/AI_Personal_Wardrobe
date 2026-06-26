@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technology Stack Reference — AI Personal Wardrobe Platform</title>
+  <style>
+    :root {
+      --obsidian: #150d22;
+      --magenta: #e91e8c;
+      --text: #1a1a2e;
+      --muted: #5c5c7a;
+      --border: #e8e0f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 11pt;
+      background: #fff;
+    }
+    .cover {
+      background: linear-gradient(135deg, var(--obsidian) 0%, #2a1540 100%);
+      color: #fff;
+      padding: 3rem 2.5rem;
+      page-break-after: always;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .cover .badge {
+      display: inline-block;
+      font-size: 9pt;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--magenta);
+      margin-bottom: 1rem;
+    }
+    .cover h1 {
+      font-size: 28pt;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .cover h2 {
+      font-size: 14pt;
+      font-weight: 400;
+      color: #c8b8d8;
+      margin-bottom: 2rem;
+    }
+    .cover .meta { font-size: 10pt; color: #a89bb8; }
+    .cover .meta span { display: block; margin-top: 0.25rem; }
+    .content { padding: 2rem 2.5rem; max-width: 900px; margin: 0 auto; }
+    h2 {
+      font-size: 16pt;
+      color: var(--obsidian);
+      border-bottom: 2px solid var(--magenta);
+      padding-bottom: 0.35rem;
+      margin: 2rem 0 1rem;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 12pt;
+      color: var(--magenta);
+      margin: 1.25rem 0 0.5rem;
+      page-break-after: avoid;
+    }
+    p { margin-bottom: 0.75rem; color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1.25rem;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: var(--obsidian);
+      color: #fff;
+      text-align: left;
+      padding: 0.5rem 0.65rem;
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.65rem;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #faf8fc; }
+    pre {
+      background: #f4f0f8;
+      border-left: 3px solid var(--magenta);
+      padding: 0.75rem 1rem;
+      font-size: 9pt;
+      line-height: 1.4;
+      overflow-x: auto;
+      margin: 0.75rem 0 1.25rem;
+      page-break-inside: avoid;
+    }
+    ul { margin: 0.5rem 0 1rem 1.25rem; color: var(--muted); font-size: 10pt; }
+    li { margin-bottom: 0.25rem; }
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 9pt;
+      color: var(--muted);
+      text-align: center;
+    }
+    @media print {
+      body { font-size: 10pt; }
+      .cover { min-height: auto; height: 100vh; }
+      h2 { page-break-before: auto; }
+      table, pre { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<section class="cover">
+  <span class="badge">Technology Stack Reference</span>
+  <h1>AI Personal Wardrobe<br>&amp; Virtual Fashion Platform</h1>
+  <h2>Frameworks, Libraries &amp; Infrastructure Guide</h2>
+  <div class="meta">
+    <span><strong>Project:</strong> wardrobe-ai/ monorepo</span>
+    <span><strong>Version:</strong> 2.0</span>
+    <span><strong>Date:</strong> June 22, 2026</span>
+  </div>
+</section>
+
+<div class="content">
+
+<h2>1. Executive Summary</h2>
+<p>Multi-service, Docker-first application for AI wardrobe management, face authentication, outfit styling, 3D virtual try-on, e-commerce catalog, and social sharing.</p>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Role</th></tr>
+  <tr><td>Frontend</td><td>Next.js 15 + React 19</td><td>UI, 3D viewer, camera auth</td></tr>
+  <tr><td>API Gateway</td><td>NestJS 10 + TypeScript</td><td>REST API, auth, orchestration</td></tr>
+  <tr><td>AI Services</td><td>FastAPI + Python</td><td>Face embeddings, clothing analysis</td></tr>
+  <tr><td>Databases</td><td>PostgreSQL 16 + Qdrant</td><td>Relational data + vector search</td></tr>
+  <tr><td>Infrastructure</td><td>Docker Compose</td><td>Container orchestration</td></tr>
+</table>
+
+<h2>2. Architecture</h2>
+<pre>Browser → Frontend (Next.js :3003) → Backend (NestJS :3001)
+              ↓              ↓              ↓
+         PostgreSQL      Qdrant      Face AI :8000 / Stylist :8001</pre>
+<p>Six Docker services on internal network <strong>wardrobe-network</strong>: frontend, backend, postgres, qdrant, face-service, stylist-service.</p>
+
+<h2>3. Languages &amp; Runtimes</h2>
+<table>
+  <tr><th>Language</th><th>Location</th><th>Purpose</th></tr>
+  <tr><td>TypeScript 5.7</td><td>backend/src/</td><td>Type-safe API, DTOs, services</td></tr>
+  <tr><td>JavaScript (JSX)</td><td>frontend/src/</td><td>Next.js App Router UI</td></tr>
+  <tr><td>Python 3</td><td>ai-services/</td><td>ML inference (InsightFace, PyTorch, rembg)</td></tr>
+  <tr><td>SQL</td><td>database/postgres/</td><td>Schema, migrations, seeds</td></tr>
+</table>
+
+<h2>4. Frontend Stack</h2>
+
+<h3>4.1 Core Framework</h3>
+<table>
+  <tr><th>Technology</th><th>Version</th><th>Used For</th></tr>
+  <tr><td>Next.js</td><td>15.x</td><td>App Router, SSR, API rewrites, image optimization</td></tr>
+  <tr><td>React</td><td>19.x</td><td>Component UI across all features</td></tr>
+  <tr><td>Tailwind CSS</td><td>3.4.x</td><td>Deep Obsidian + Vivid Magenta design system</td></tr>
+</table>
+
+<h3>4.2 UI &amp; Design</h3>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>Radix UI</td><td>Accessible dialogs, tabs, select, alert-dialog</td></tr>
+  <tr><td>CVA + clsx + tailwind-merge</td><td>ShadCN-style composable components</td></tr>
+  <tr><td>Lucide React</td><td>Icons (nav, catalog, auth, share menu)</td></tr>
+  <tr><td>next-themes</td><td>Dark/light mode</td></tr>
+</table>
+
+<h3>4.3 State &amp; Data</h3>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>Zustand</td><td>Auth, cart, wishlist, face studio, toasts, orders</td></tr>
+  <tr><td>TanStack React Query</td><td>Wardrobe, outfits, catalog, dashboard API caching</td></tr>
+  <tr><td>React Hook Form + Zod</td><td>Forms and schema validation</td></tr>
+</table>
+
+<h3>4.4 3D Virtual Try-On</h3>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>Three.js</td><td>WebGL 3D rendering</td></tr>
+  <tr><td>@react-three/fiber</td><td>React renderer for Three.js</td></tr>
+  <tr><td>@react-three/drei</td><td>GLTF loading, Clone, camera controls</td></tr>
+  <tr><td>GLB models (public/models/)</td><td>Shirt, jacket, blazer on 3D mannequin</td></tr>
+</table>
+
+<h3>4.5 Face Auth (Client)</h3>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>@vladmandic/face-api</td><td>Browser face detection during capture</td></tr>
+  <tr><td>TensorFlow.js + WebGL</td><td>Client-side ML inference</td></tr>
+  <tr><td>browser-image-compression</td><td>Compress images before upload</td></tr>
+</table>
+
+<h3>4.6 Other Frontend</h3>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>Recharts</td><td>Admin console charts</td></tr>
+  <tr><td>Web Share API</td><td>Social sharing (Instagram, WhatsApp, etc.)</td></tr>
+</table>
+
+<h3>4.7 Feature Modules</h3>
+<table>
+  <tr><th>Module</th><th>Purpose</th></tr>
+  <tr><td>auth</td><td>Face + email login, JWT session</td></tr>
+  <tr><td>landing</td><td>Marketing homepage</td></tr>
+  <tr><td>dashboard</td><td>Personalized home, recommendations</td></tr>
+  <tr><td>wardrobe</td><td>Digital closet upload &amp; grid</td></tr>
+  <tr><td>outfits</td><td>AI outfit cards &amp; feedback</td></tr>
+  <tr><td>catalog</td><td>Product browse &amp; filters</td></tr>
+  <tr><td>try-on</td><td>3D Virtual Try-On modal &amp; share</td></tr>
+  <tr><td>face-studio</td><td>Face capture for 3D avatar</td></tr>
+  <tr><td>commerce / checkout</td><td>Cart, wishlist, checkout</td></tr>
+  <tr><td>admin</td><td>Admin console (RBAC)</td></tr>
+  <tr><td>profile / settings</td><td>Onboarding &amp; account</td></tr>
+</table>
+
+<h2>5. Backend Stack (NestJS)</h2>
+<table>
+  <tr><th>Technology</th><th>Used For</th></tr>
+  <tr><td>NestJS 10 + Express</td><td>Modular REST API gateway</td></tr>
+  <tr><td>@nestjs/jwt + Passport</td><td>JWT authentication &amp; guards</td></tr>
+  <tr><td>bcryptjs</td><td>Password hashing</td></tr>
+  <tr><td>class-validator</td><td>DTO request validation</td></tr>
+  <tr><td>@nestjs/swagger</td><td>OpenAPI docs at /api/docs</td></tr>
+  <tr><td>pg</td><td>PostgreSQL client</td></tr>
+  <tr><td>@qdrant/js-client-rest</td><td>Vector similarity search</td></tr>
+  <tr><td>Jest + ts-jest</td><td>Unit tests</td></tr>
+</table>
+
+<h3>Backend Modules</h3>
+<table>
+  <tr><th>Module</th><th>Purpose</th></tr>
+  <tr><td>AuthModule</td><td>Face register/login, email auth</td></tr>
+  <tr><td>ProfileModule</td><td>User profile &amp; onboarding</td></tr>
+  <tr><td>FashionDnaModule</td><td>Style DNA scoring</td></tr>
+  <tr><td>WardrobeModule</td><td>Clothing CRUD &amp; uploads</td></tr>
+  <tr><td>OutfitsModule</td><td>Outfit generation</td></tr>
+  <tr><td>ProductsModule</td><td>E-commerce catalog API</td></tr>
+  <tr><td>TryOnModule</td><td>Virtual try-on sessions</td></tr>
+  <tr><td>ChatModule</td><td>AI stylist chat</td></tr>
+</table>
+
+<h2>6. AI Services (Python)</h2>
+
+<h3>6.1 Face Service — Port 8000</h3>
+<p>512-dim ArcFace embeddings for face registration and login.</p>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>FastAPI + Uvicorn</td><td>REST API server</td></tr>
+  <tr><td>InsightFace + ONNX Runtime</td><td>Face recognition inference</td></tr>
+  <tr><td>OpenCV + Pillow + NumPy</td><td>Image preprocessing</td></tr>
+</table>
+
+<h3>6.2 Stylist Service — Port 8001</h3>
+<p>Clothing analysis, outfit recommendations, background removal.</p>
+<table>
+  <tr><th>Library</th><th>Used For</th></tr>
+  <tr><td>FastAPI + Uvicorn</td><td>REST API server</td></tr>
+  <tr><td>PyTorch + torchvision</td><td>Category detection, embeddings</td></tr>
+  <tr><td>scikit-learn</td><td>Dominant color extraction</td></tr>
+  <tr><td>rembg (U-2-Net)</td><td>Background removal on uploads</td></tr>
+</table>
+
+<h2>7. Databases &amp; Storage</h2>
+<table>
+  <tr><th>Technology</th><th>Port</th><th>Used For</th></tr>
+  <tr><td>PostgreSQL 16</td><td>5432</td><td>Users, wardrobe, outfits, products</td></tr>
+  <tr><td>Qdrant 1.12</td><td>6333</td><td>Face, fashion DNA, clothing vectors</td></tr>
+  <tr><td>Docker volume</td><td>—</td><td>Wardrobe image uploads</td></tr>
+</table>
+
+<h2>8. DevOps</h2>
+<table>
+  <tr><th>Technology</th><th>Used For</th></tr>
+  <tr><td>Docker + Docker Compose</td><td>6-service reproducible stack</td></tr>
+  <tr><td>Multi-stage Dockerfiles</td><td>Production images</td></tr>
+  <tr><td>.env configuration</td><td>Secrets &amp; ports</td></tr>
+  <tr><td>ESLint + Prettier</td><td>Code quality</td></tr>
+</table>
+
+<h2>9. Service URLs (Local Dev)</h2>
+<table>
+  <tr><th>Service</th><th>URL</th></tr>
+  <tr><td>Frontend (dev)</td><td>http://localhost:3003</td></tr>
+  <tr><td>Frontend (Docker)</td><td>http://localhost:3000</td></tr>
+  <tr><td>Backend API</td><td>http://localhost:3001/api</td></tr>
+  <tr><td>Swagger UI</td><td>http://localhost:3001/api/docs</td></tr>
+  <tr><td>Face AI</td><td>http://localhost:8000</td></tr>
+  <tr><td>Stylist AI</td><td>http://localhost:8001</td></tr>
+  <tr><td>PostgreSQL</td><td>localhost:5432</td></tr>
+  <tr><td>Qdrant</td><td>http://localhost:6333</td></tr>
+</table>
+
+<h2>10. Feature → Technology Map</h2>
+<table>
+  <tr><th>Feature</th><th>Technologies</th></tr>
+  <tr><td>Face auth</td><td>face-api.js, InsightFace, Qdrant, JWT</td></tr>
+  <tr><td>Wardrobe upload</td><td>NestJS, PostgreSQL, stylist-service, rembg</td></tr>
+  <tr><td>Outfit recommendations</td><td>PyTorch stylist-service, React Query</td></tr>
+  <tr><td>3D Virtual Try-On</td><td>Three.js, R3F, drei, GLB models</td></tr>
+  <tr><td>Product catalog</td><td>ProductsModule, PostgreSQL, catalog feature</td></tr>
+  <tr><td>Cart &amp; checkout</td><td>Zustand stores</td></tr>
+  <tr><td>Admin console</td><td>Recharts, RBAC env allowlist</td></tr>
+  <tr><td>Social sharing</td><td>Web Share API, ShareMenu modal</td></tr>
+</table>
+
+<div class="footer">
+  AI Personal Wardrobe &amp; Virtual Fashion Platform — Technology Stack Reference v2.0
+</div>
+
+</div>
+</body>
+</html>

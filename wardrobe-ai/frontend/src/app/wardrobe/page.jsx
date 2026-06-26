@@ -1,1 +1,1 @@
-export { WardrobePage as default } from '@/features/wardrobe/components/WardrobePage';
+export { default } from '@/features/wardrobe/components/WardrobePage';

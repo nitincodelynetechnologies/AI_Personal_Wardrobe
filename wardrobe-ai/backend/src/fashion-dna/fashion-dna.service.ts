@@ -55,17 +55,32 @@ export class FashionDnaService {
   ): Promise<FashionDnaRecord> {
     const mock = calculateMockFashionDna(preferences);
     const record = await this.upsertFashionDna(userId, mock);
-    const vector = generateMockFashionVector(
-      `${userId}:${JSON.stringify(mock)}:${preferences.fashion_style ?? ''}`,
-      this.configService,
-    );
 
-    await this.qdrantService.upsertFashionDnaVector(userId, vector, {
-      user_id: userId,
-      fashion_dna_id: record.id,
-      fashion_style: preferences.fashion_style ?? undefined,
-      style_score: mock.style_score,
-    });
+    if (this.qdrantService.isReady()) {
+      try {
+        const vector = generateMockFashionVector(
+          `${userId}:${JSON.stringify(mock)}:${preferences.fashion_style ?? ''}`,
+          this.configService,
+        );
+
+        await this.qdrantService.upsertFashionDnaVector(userId, vector, {
+          user_id: userId,
+          fashion_dna_id: record.id,
+          fashion_style: preferences.fashion_style ?? undefined,
+          style_score: mock.style_score,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Fashion DNA saved to PostgreSQL but vector upsert failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        'Qdrant unavailable — Fashion DNA saved without vector embedding (start Docker: docker compose up -d qdrant)',
+      );
+    }
 
     this.logger.log(`Fashion DNA recalculated for user ${userId}`);
 

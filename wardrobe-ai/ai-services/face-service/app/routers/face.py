@@ -16,11 +16,18 @@ router = APIRouter(prefix="/v1/face", tags=["face"])
 
 
 async def _decode_upload(upload: UploadFile) -> bytes:
-    if not upload.content_type or not upload.content_type.startswith("image/"):
+    content_type = (upload.content_type or '').lower()
+    filename = (upload.filename or '').lower()
+
+    allowed_type = content_type.startswith('image/')
+    allowed_name = filename.endswith(('.jpg', '.jpeg', '.png', '.webp'))
+
+    if not allowed_type and not allowed_name:
         raise HTTPException(
             status_code=400,
             detail={"code": "INVALID_IMAGE_FORMAT", "detail": "Image must be JPEG or PNG"},
         )
+
     return await upload.read()
 
 

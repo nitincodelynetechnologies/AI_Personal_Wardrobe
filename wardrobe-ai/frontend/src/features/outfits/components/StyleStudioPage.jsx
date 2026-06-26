@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
 import { useToastStore } from '@/components/ui/toaster';
 import { DashboardLayout } from '@/features/dashboard/components/DashboardLayout';
 import { getNetworkErrorMessage } from '@/features/auth/services/apiClient';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useProfileStore } from '@/features/profile/store/useProfileStore';
+import { useOnboardingGuard } from '@/features/profile/hooks/useOnboardingGuard';
 import { GenerateOutfitButton } from '@/features/outfits/components/GenerateOutfitButton';
 import { OutfitGenerationLoader } from '@/features/outfits/components/OutfitGenerationLoader';
 import { OutfitsEmptyState } from '@/features/outfits/components/OutfitsEmptyState';
@@ -23,12 +21,9 @@ import { useOutfitStore } from '@/features/outfits/store/useOutfitStore';
 export function StyleStudioPage() {
   const router = useRouter();
   const showToast = useToastStore((state) => state.showToast);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const onboardingComplete = useProfileStore((state) => state.onboardingComplete);
   const outfits = useOutfitStore((state) => state.outfits);
 
-  const [hydrated, setHydrated] = useState(false);
+  const { ready } = useOnboardingGuard();
   const { isLoading, isError, error } = useOutfits();
 
   const { mutate: generateOutfit, isPending: isGenerating } = useGenerateOutfit({
@@ -43,30 +38,11 @@ export function StyleStudioPage() {
     },
   });
 
-  useEffect(() => {
-    useAuthStore.persist.rehydrate();
-    useProfileStore.persist.rehydrate();
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-
-    if (!isAuthenticated && !accessToken) {
-      router.replace('/login/face');
-      return;
-    }
-
-    if (!onboardingComplete) {
-      router.replace('/onboarding');
-    }
-  }, [hydrated, isAuthenticated, accessToken, onboardingComplete, router]);
-
   const handleGenerate = () => {
     generateOutfit({ season: 'All' });
   };
 
-  if (!hydrated) return null;
+  if (!ready) return null;
 
   const showEmpty = !isLoading && outfits.length === 0;
 
@@ -77,8 +53,8 @@ export function StyleStudioPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-champagne">Style Studio</p>
-            <h1 className="font-display text-2xl font-semibold sm:text-3xl">Style Studio</h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-violet">Style Studio</p>
+            <h1 className="font-playfair text-2xl font-semibold sm:text-3xl">Style Studio</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {outfits.length} saved look{outfits.length === 1 ? '' : 's'} from your wardrobe
             </p>
@@ -110,7 +86,7 @@ export function StyleStudioPage() {
             Need more variety?{' '}
             <button
               type="button"
-              className="text-champagne underline-offset-4 hover:underline"
+              className="text-violet underline-offset-4 hover:underline"
               onClick={() => router.push('/wardrobe')}
             >
               Add items to your wardrobe

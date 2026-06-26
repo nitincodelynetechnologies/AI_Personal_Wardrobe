@@ -11,7 +11,7 @@ export function BudgetSlider({ value, onChange, className }) {
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Budget comfort zone</span>
-        <span className="font-medium text-champagne">{activeLevel.label}</span>
+        <span className="font-medium text-violet">{activeLevel.label}</span>
       </div>
 
       <input
@@ -21,7 +21,7 @@ export function BudgetSlider({ value, onChange, className }) {
         step={1}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-noir-elevated accent-champagne"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white dark:bg-[#150d22] accent-violet"
         aria-label="Budget range"
       />
 

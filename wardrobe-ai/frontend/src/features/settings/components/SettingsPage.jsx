@@ -33,6 +33,7 @@ function mapValidationErrors(error) {
 
 function mapProfileToForm(profile) {
   return {
+    gender: profile?.gender ?? '',
     age: profile?.age ?? '',
     heightCm: profile?.height ?? 170,
     weightKg: profile?.weight ?? 65,
@@ -60,6 +61,7 @@ export function SettingsPage() {
   const [hydrated, setHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [loadedProfile, setLoadedProfile] = useState(null);
   const [profileForm, setProfileForm] = useState(mapProfileToForm(cachedProfile));
   const [preferencesForm, setPreferencesForm] = useState(mapPreferencesToForm(cachedPreferences));
   const [profileErrors, setProfileErrors] = useState({});
@@ -95,6 +97,7 @@ export function SettingsPage() {
 
         setProfile(response.profile);
         setPreferences(response.preferences);
+        setLoadedProfile(response.profile);
         setProfileForm(mapProfileToForm(response.profile));
         setPreferencesForm(mapPreferencesToForm(response.preferences));
       } catch (error) {
@@ -128,21 +131,24 @@ export function SettingsPage() {
       setProfileErrors({});
 
       try {
+        const validated = result.data;
         const response = await updateProfile(
           {
-            gender: cachedProfile?.gender,
-            age: profileForm.age,
-            heightCm: profileForm.heightCm,
-            weightKg: profileForm.weightKg,
-            bodyType: cachedProfile?.body_type,
-            skinTone: cachedProfile?.skin_tone,
+            gender: validated.gender,
+            age: validated.age,
+            heightCm: validated.heightCm,
+            weightKg: validated.weightKg,
+            bodyType: loadedProfile?.body_type,
+            skinTone: loadedProfile?.skin_tone,
           },
           accessToken,
         );
 
         setProfile(response.profile);
+        setLoadedProfile(response.profile);
         setPreferences(response.preferences);
-        showToast({ message: 'Profile updated successfully.', variant: 'success' });
+        setProfileForm(mapProfileToForm(response.profile));
+        showToast({ message: 'Profile updated successfully!', variant: 'success' });
       } catch (error) {
         showToast({
           message: getNetworkErrorMessage(error),
@@ -152,7 +158,7 @@ export function SettingsPage() {
         setIsSavingProfile(false);
       }
     },
-    [accessToken, cachedProfile, profileForm, setPreferences, setProfile, showToast],
+    [accessToken, loadedProfile, profileForm, setProfile, showToast],
   );
 
   const handlePreferencesSubmit = useCallback(
@@ -168,11 +174,12 @@ export function SettingsPage() {
       setPreferenceErrors({});
 
       try {
+        const validated = result.data;
         const response = await updatePreferences(
           {
-            favoriteColors: preferencesForm.favoriteColors,
+            favoriteColors: validated.favoriteColors,
             favoriteBrands: cachedPreferences?.favorite_brands ?? [],
-            budgetSlider: preferencesForm.budgetSlider,
+            budgetSlider: validated.budgetSlider,
             fashionStyle: cachedPreferences?.fashion_style ?? 'casual',
           },
           accessToken,
@@ -206,8 +213,8 @@ export function SettingsPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-3xl space-y-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-champagne">Account</p>
-          <h1 className="font-display text-2xl font-semibold sm:text-3xl">Settings</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-violet">Account</p>
+          <h1 className="font-playfair text-2xl font-semibold sm:text-3xl">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Update your profile details, style preferences, and appearance.
           </p>
@@ -215,7 +222,7 @@ export function SettingsPage() {
 
         <Card className="border-border bg-card/40">
           <CardHeader>
-            <CardTitle className="font-display text-lg">Appearance</CardTitle>
+            <CardTitle className="font-playfair text-lg">Appearance</CardTitle>
             <CardDescription>Switch between light and dark mode across the app.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,9 +243,9 @@ export function SettingsPage() {
           </TabsList>
 
           <TabsContent value="profile">
-            <Card className="border-white/10 bg-noir-elevated/30">
+            <Card className="border-borderColor bg-white/30 dark:bg-[#150d22]/30">
               <CardHeader>
-                <CardTitle className="font-display text-lg">My Profile</CardTitle>
+                <CardTitle className="font-playfair text-lg">My Profile</CardTitle>
                 <CardDescription>Keep your fit profile accurate for better recommendations.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -267,9 +274,9 @@ export function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="preferences">
-            <Card className="border-white/10 bg-noir-elevated/30">
+            <Card className="border-borderColor bg-white/30 dark:bg-[#150d22]/30">
               <CardHeader>
-                <CardTitle className="font-display text-lg">Style Preferences</CardTitle>
+                <CardTitle className="font-playfair text-lg">Style Preferences</CardTitle>
                 <CardDescription>Adjust budget and color preferences for the AI stylist.</CardDescription>
               </CardHeader>
               <CardContent>

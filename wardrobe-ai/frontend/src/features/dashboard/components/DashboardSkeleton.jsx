@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 function SkeletonBlock({ className }) {
-  return <div className={`animate-pulse rounded-lg bg-white/5 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-white/5 dark:bg-[#150d22]/5 ${className}`} />;
 }
 
 export function DashboardSkeleton() {
@@ -18,7 +18,7 @@ export function DashboardSkeleton() {
         </div>
       </div>
 
-      <Card className="border-white/10 bg-noir-elevated/30">
+      <Card className="border-borderColor bg-white/30 dark:bg-[#150d22]/30">
         <CardHeader className="space-y-2">
           <SkeletonBlock className="h-6 w-40" />
           <SkeletonBlock className="h-4 w-72" />

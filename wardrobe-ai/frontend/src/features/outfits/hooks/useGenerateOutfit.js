@@ -40,6 +40,14 @@ export function useGenerateOutfit({ onSuccess, onError } = {}) {
 
 export function getGenerateOutfitErrorMessage(error) {
   if (error instanceof ApiError && error.status === 400) {
+    const message = error.message || '';
+    if (
+      message.includes('one possible outfit') ||
+      message.includes('No new outfit combinations') ||
+      message.includes('Add more wardrobe items')
+    ) {
+      return message;
+    }
     return 'Upload more clothes first!';
   }
 

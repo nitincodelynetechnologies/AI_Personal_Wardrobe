@@ -21,9 +21,31 @@ export function formatLabel(value) {
 }
 
 export function getUserInitials(user) {
-  const source = user?.email || user?.mobile || 'U';
-  const letter = source.trim().charAt(0).toUpperCase();
-  return letter || 'U';
+  const source = user?.email || user?.mobile || 'User';
+  const parts = source.split(/[@.\s_-]+/).filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+  }
+
+  return source.slice(0, 2).toUpperCase();
+}
+
+export function getUserDisplayName(user, profile) {
+  if (profile?.full_name?.trim()) return profile.full_name.trim();
+  if (user?.name?.trim()) return user.name.trim();
+
+  const email = user?.email?.trim();
+  if (email) {
+    const local = email.split('@')[0] || '';
+    return local
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  return 'Guest';
 }
 
 export function getTopAffinities(affinityMap = {}, limit = 4) {
