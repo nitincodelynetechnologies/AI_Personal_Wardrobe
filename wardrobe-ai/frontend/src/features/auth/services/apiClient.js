@@ -75,9 +75,22 @@ export async function apiClient(endpoint, options = {}) {
   }
 
   const contentType = response.headers.get('content-type');
-  const data = contentType?.includes('application/json')
-    ? await response.json()
-    : await response.text();
+  let data;
+
+  if (contentType?.includes('application/json')) {
+    const raw = await response.text();
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new ApiError(
+        'Server returned an invalid response. Try again in a moment.',
+        response.status,
+        raw.slice(0, 200),
+      );
+    }
+  } else {
+    data = await response.text();
+  }
 
   if (!response.ok) {
     const message =

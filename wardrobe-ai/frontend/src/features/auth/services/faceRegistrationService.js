@@ -1,5 +1,20 @@
+import imageCompression from 'browser-image-compression';
 import { apiClient } from '@/features/auth/services/apiClient';
 import { BACKEND_FACE_POSE_FIELDS } from '@/features/auth/constants/captureSteps';
+
+async function compressFaceBlob(blob) {
+  const file =
+    blob instanceof File
+      ? blob
+      : new File([blob], 'face.jpg', { type: blob.type || 'image/jpeg' });
+
+  return imageCompression(file, {
+    maxSizeMB: 0.35,
+    maxWidthOrHeight: 1024,
+    useWebWorker: true,
+    fileType: 'image/jpeg',
+  });
+}
 
 function asJpegBlob(blob) {
   if (blob.type === 'image/jpeg' || blob.type === 'image/png' || blob.type === 'image/webp') {
@@ -20,7 +35,7 @@ export async function registerFace({ captures, userDetails = {}, token }) {
     throw new Error('Front face capture is required');
   }
 
-  const imageBlob = asJpegBlob(frontBlob);
+  const imageBlob = asJpegBlob(await compressFaceBlob(frontBlob));
   const formData = new FormData();
 
   BACKEND_FACE_POSE_FIELDS.forEach((field) => {

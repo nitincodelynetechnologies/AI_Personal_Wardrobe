@@ -1,5 +1,6 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const DEFAULT_BACKEND_API_URL = 'http://localhost:3001/api';
 
@@ -17,6 +18,7 @@ async function proxyToBackend(request, context) {
   const headers = new Headers(request.headers);
   headers.delete('host');
   headers.delete('connection');
+  headers.delete('content-length');
 
   const init = {
     method: request.method,
@@ -25,16 +27,18 @@ async function proxyToBackend(request, context) {
   };
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    init.body = request.body;
-    init.duplex = 'half';
+    init.body = await request.arrayBuffer();
   }
 
   try {
     const upstream = await fetch(targetUrl, init);
     const responseHeaders = new Headers(upstream.headers);
     responseHeaders.delete('transfer-encoding');
+    responseHeaders.delete('content-encoding');
 
-    return new Response(upstream.body, {
+    const responseBody = await upstream.arrayBuffer();
+
+    return new Response(responseBody, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,
