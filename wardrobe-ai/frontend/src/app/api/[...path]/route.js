@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_BACKEND_API_URL = 'http://localhost:3001/api';
 
 function resolveBackendApiUrl() {
-  return (process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL).replace(/\/$/, '');
+  const raw = (process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL).trim().replace(/\/$/, '');
+  return raw.endsWith('/api') ? raw : `${raw}/api`;
 }
 
 async function proxyToBackend(request, context) {
@@ -28,15 +29,26 @@ async function proxyToBackend(request, context) {
     init.duplex = 'half';
   }
 
-  const upstream = await fetch(targetUrl, init);
-  const responseHeaders = new Headers(upstream.headers);
-  responseHeaders.delete('transfer-encoding');
+  try {
+    const upstream = await fetch(targetUrl, init);
+    const responseHeaders = new Headers(upstream.headers);
+    responseHeaders.delete('transfer-encoding');
 
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  });
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Backend unreachable';
+    return Response.json(
+      {
+        message: `API proxy failed: ${message}. Set BACKEND_API_URL on Render (e.g. https://your-backend.onrender.com/api).`,
+        statusCode: 502,
+      },
+      { status: 502 },
+    );
+  }
 }
 
 export const GET = proxyToBackend;

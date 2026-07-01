@@ -7,7 +7,7 @@
     "dev:local": "node ./node_modules/next/dist/bin/next dev -p 3003",
     "dev:fresh": "node scripts/clean-next.js && node ./node_modules/next/dist/bin/next dev -p 3003",
     "build": "node ./node_modules/next/dist/bin/next build",
-    "start": "node ./node_modules/next/dist/bin/next start",
+    "start": "node ./node_modules/next/dist/bin/next start -H 0.0.0.0",
     "lint": "node ./node_modules/next/dist/bin/next lint",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
     "clean": "node scripts/clean-next.js",

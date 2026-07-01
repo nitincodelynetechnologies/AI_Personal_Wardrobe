@@ -1,0 +1,2 @@
+# Generated at build time by scripts/copy-postgres-migrations.js
+database/postgres/migrations/

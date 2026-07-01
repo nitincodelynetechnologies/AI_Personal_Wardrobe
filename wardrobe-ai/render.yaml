@@ -1,0 +1,67 @@
+# Render Blueprint — AI Personal Wardrobe Platform
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Before deploy:
+# 1. Push this repo to GitHub and connect it on Render.
+# 2. Create a PostgreSQL database on Render (or use an existing one).
+# 3. Create a Qdrant Cloud cluster and copy URL + API key.
+# 4. Fill env vars marked sync: false in the Render dashboard after first sync.
+#
+# Use Node runtime (not Docker) — simpler and fixes migration paths automatically.
+
+services:
+  - type: web
+    name: wardrobe-api
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: wardrobe-ai/backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wardrobe-database
+          property: connectionString
+      - key: POSTGRES_SSL
+        value: "true"
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FACE_SERVICE_MOCK
+        value: "true"
+      - key: CLOTHING_SERVICE_MOCK
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: wardrobe-web
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: wardrobe-ai/frontend
+    buildCommand: npm ci --ignore-scripts && node scripts/copy-face-models.js && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_DIST_DIR
+        value: .next
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: /api
+      - key: BACKEND_API_URL
+        sync: false
+
+databases:
+  - name: wardrobe-database
+    region: singapore
+    plan: free
+    databaseName: wardrobe_database
+    user: wardrobe_database_user
