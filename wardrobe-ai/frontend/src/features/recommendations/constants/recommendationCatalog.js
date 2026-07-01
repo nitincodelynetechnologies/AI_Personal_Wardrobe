@@ -149,6 +149,7 @@ export const RECOMMENDATION_TYPES = {
   BODY: 'body',
   COLOR: 'color',
   COMPLETE: 'complete',
+  STYLE: 'style',
 };
 
 export const HERO_EDITORIAL_IMAGES = [

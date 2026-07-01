@@ -13,10 +13,31 @@ export async function fetchVtonHealth() {
   try {
     const response = await fetch(`${VTON_API_BASE}/health`, { cache: 'no-store' });
     if (!response.ok) return null;
-    return response.json();
+    const data = await response.json();
+    return data?.service === 'idm-vton' ? data : null;
   } catch {
     return null;
   }
+}
+
+function buildOfflineMockResult(userImageSource) {
+  return {
+    success: true,
+    mock: true,
+    backend_offline: true,
+    fallback_reason:
+      'VTON backend is offline — showing dev pairing. Start it: cd wardrobe-ai/vton-backend && .\\start.ps1',
+    result_image_url: userImageSource,
+  };
+}
+
+function isProxyOrBackendFailure(status, data) {
+  return (
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    (status === 500 && !data)
+  );
 }
 
 /**
@@ -41,6 +62,11 @@ export async function urlToFile(url, filename) {
  * POST to Python IDM-VTON FastAPI backend (proxied through Next.js in dev).
  */
 export async function requestIdmVton({ userImageSource, garmentImageSource, garmentDescription }) {
+  const health = await fetchVtonHealth();
+  if (!health) {
+    return buildOfflineMockResult(userImageSource);
+  }
+
   const [userFile, garmentFile] = await Promise.all([
     urlToFile(userImageSource, 'user.jpg'),
     urlToFile(garmentImageSource, 'garment.jpg'),
@@ -64,9 +90,13 @@ export async function requestIdmVton({ userImageSource, garmentImageSource, garm
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (isProxyOrBackendFailure(response.status, data)) {
+        return buildOfflineMockResult(userImageSource);
+      }
+
       const fallback =
-        response.status === 500 && !data
-          ? 'VTON proxy timed out or failed — restart the Next dev server after config changes, or retry (real AI takes 2–5 min).'
+        response.status === 500
+          ? 'VTON proxy timed out — retry (real AI takes 2–5 min) or restart the Next dev server after config changes.'
           : null;
       throw new Error(data?.error || data?.detail || fallback || `VTON service error (${response.status})`);
     }

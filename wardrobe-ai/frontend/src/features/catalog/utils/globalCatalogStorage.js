@@ -2,12 +2,18 @@ export const GLOBAL_CATALOG_KEY = 'vton_global_catalog';
 export const GLOBAL_CATALOG_UPDATED_EVENT = 'vton-global-catalog-updated';
 
 export const ADMIN_GARMENT_CATEGORIES = ['Tops', 'Bottoms', 'Shoes', 'Dresses'];
+export const STOCK_STATUSES = ['In Stock', 'Low Stock', 'Out of Stock'];
+export const SIZE_VARIANTS = ['S', 'M', 'L', 'XL'];
+export const COLOR_VARIANTS = ['Red', 'Blue', 'Black'];
 
 const EMPTY_FORM = {
   name: '',
   price: '',
   category: 'Tops',
   imageUrl: '',
+  stockStatus: 'In Stock',
+  sizes: ['S', 'M', 'L'],
+  colors: ['Black'],
 };
 
 function safeRead(key) {
@@ -52,6 +58,13 @@ function normalizeGarment(garment) {
     price: Number(garment.price) || 0,
     category: ADMIN_GARMENT_CATEGORIES.includes(garment.category) ? garment.category : 'Tops',
     imageUrl,
+    stockStatus: STOCK_STATUSES.includes(garment.stockStatus) ? garment.stockStatus : 'In Stock',
+    sizes: Array.isArray(garment.sizes) && garment.sizes.length > 0
+      ? garment.sizes.filter((size) => SIZE_VARIANTS.includes(size))
+      : [...SIZE_VARIANTS],
+    colors: Array.isArray(garment.colors) && garment.colors.length > 0
+      ? garment.colors.filter((color) => COLOR_VARIANTS.includes(color))
+      : ['Black'],
   };
 }
 
@@ -112,6 +125,19 @@ export function deleteGlobalCatalogGarment(id) {
   return garments;
 }
 
+/** Mock bulk import — appends normalized garments in one write. */
+export function bulkCreateGlobalCatalogGarments(items) {
+  const normalized = items.map((item, index) =>
+    normalizeGarment({ ...item, id: item.id ?? Date.now() + index }),
+  ).filter(Boolean);
+  if (!normalized.length) throw new Error('No valid garments to import.');
+
+  const next = [...readGlobalCatalog(), ...normalized];
+  const { ok, garments } = writeGlobalCatalog(next);
+  if (!ok) throw new Error('Could not bulk import — storage may be full.');
+  return garments;
+}
+
 export function garmentToCatalogProduct(garment) {
   const imageUrl = garment.imageUrl ?? garment.image_url ?? '';
   return {
@@ -137,5 +163,8 @@ export function garmentToFormValues(garment) {
     price: garment?.price != null ? String(garment.price) : '',
     category: garment?.category ?? 'Tops',
     imageUrl: garment?.imageUrl ?? garment?.image_url ?? '',
+    stockStatus: garment?.stockStatus ?? 'In Stock',
+    sizes: garment?.sizes ?? [...SIZE_VARIANTS],
+    colors: garment?.colors ?? ['Black'],
   };
 }

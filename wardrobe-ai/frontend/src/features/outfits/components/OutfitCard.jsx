@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
+import { SaveToClosetButton } from '@/features/closet/components/SaveToClosetButton';
 import { useOutfitFeedback } from '@/features/outfits/hooks/useOutfitFeedback';
 import { useDeleteOutfit } from '@/features/outfits/hooks/useDeleteOutfit';
 import { useOutfitStore } from '@/features/outfits/store/useOutfitStore';
@@ -180,6 +181,8 @@ export function OutfitCard({ outfit }) {
               </Button>
             </div>
           </div>
+
+          <SaveToClosetButton outfit={liveOutfit} className="mt-3" />
         </div>
       </div>
 

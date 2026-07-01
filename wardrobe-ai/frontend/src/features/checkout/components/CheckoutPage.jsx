@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Lock } from 'lucide-react';
@@ -13,6 +13,7 @@ import { CHECKOUT_PROCESSING_MS } from '@/features/checkout/constants/checkoutOp
 import { CheckoutOrderSummary } from '@/features/checkout/components/CheckoutOrderSummary';
 import { OrderSuccess } from '@/features/checkout/components/OrderSuccess';
 import { PaymentMethodSelector } from '@/features/checkout/components/PaymentMethodSelector';
+import { usePremiumGate } from '@/features/auth/hooks/usePremiumGate';
 
 const INITIAL_SHIPPING = {
   fullName: '',
@@ -22,11 +23,52 @@ const INITIAL_SHIPPING = {
   pincode: '',
 };
 
+function normalizeCartLines(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object') return [raw];
+  return [];
+}
+
+function parseLinePrice(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Number(String(value ?? '').replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function computeCartTotal(lines) {
+  return normalizeCartLines(lines).reduce(
+    (sum, item) => sum + parseLinePrice(item.price) * Math.max(1, Number(item.quantity) || 1),
+    0,
+  );
+}
+
+function hasCartLines(lines) {
+  return normalizeCartLines(lines).length > 0;
+}
+
+function isShippingComplete(shipping) {
+  return Boolean(
+    shipping.fullName?.trim() &&
+      shipping.email?.trim() &&
+      shipping.address?.trim() &&
+      shipping.city?.trim() &&
+      String(shipping.pincode ?? '').trim().length >= 6,
+  );
+}
+
+async function ensureCartHydrated() {
+  const persistApi = useCartStore.persist;
+  if (persistApi?.rehydrate) {
+    await persistApi.rehydrate();
+  }
+}
+
 export function CheckoutPage() {
   const router = useRouter();
   const { ready } = useOnboardingGuard();
+  const { interceptPremium, PremiumGateModal } = usePremiumGate();
 
-  const items = useCartStore((state) => state.items);
+  const liveCartItems = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const closeCart = useCartStore((state) => state.closeCart);
   const placeOrder = useOrderStore((state) => state.placeOrder);
@@ -37,55 +79,143 @@ export function CheckoutPage() {
   const [shipping, setShipping] = useState(INITIAL_SHIPPING);
   const [phase, setPhase] = useState('checkout');
   const [placedOrder, setPlacedOrder] = useState(null);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const [checkoutLines, setCheckoutLines] = useState([]);
 
-  const estimatedTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartSnapshottedRef = useRef(false);
+  const redirectCheckedRef = useRef(false);
+
+  const syncCheckoutLines = useCallback((nextItems) => {
+    const normalized = normalizeCartLines(nextItems).map((item) => ({
+      ...item,
+      quantity: Math.max(1, Number(item.quantity) || 1),
+      price: parseLinePrice(item.price),
+    }));
+
+    if (normalized.length > 0) {
+      setCheckoutLines(normalized);
+      cartSnapshottedRef.current = true;
+    }
+  }, []);
+
+  const estimatedTotal = computeCartTotal(checkoutLines);
 
   useEffect(() => {
     closeCart();
   }, [closeCart]);
 
   useEffect(() => {
-    if (!ready || phase !== 'checkout') return;
-    if (items.length === 0 && !placedOrder) {
-      router.replace('/catalog');
+    let cancelled = false;
+
+    async function hydrateCart() {
+      try {
+        await ensureCartHydrated();
+      } catch {
+        // Cart may already be hydrated in memory from providers.jsx
+      }
+
+      if (!cancelled) setCartHydrated(true);
     }
-  }, [ready, items.length, phase, placedOrder, router]);
+
+    void hydrateCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+
+    const storeItems = useCartStore.getState().items;
+    if (hasCartLines(storeItems)) {
+      syncCheckoutLines(storeItems);
+    }
+  }, [cartHydrated, liveCartItems, syncCheckoutLines]);
+
+  useEffect(() => {
+    if (!cartHydrated || !ready || redirectCheckedRef.current || phase !== 'checkout') return;
+
+    redirectCheckedRef.current = true;
+
+    const storeItems = normalizeCartLines(useCartStore.getState().items);
+    if (storeItems.length === 0 && !placedOrder) {
+      router.replace('/catalog');
+      return;
+    }
+
+    if (storeItems.length > 0) {
+      syncCheckoutLines(storeItems);
+    }
+  }, [cartHydrated, ready, phase, placedOrder, router, syncCheckoutLines]);
 
   const updateShipping = (field) => (event) => {
     setShipping((current) => ({ ...current, [field]: event.target.value }));
   };
 
-  const isFormValid =
-    shipping.fullName.trim() &&
-    shipping.email.trim() &&
-    shipping.address.trim() &&
-    shipping.city.trim() &&
-    shipping.pincode.trim().length >= 6;
-
   const handlePlaceOrder = async (event) => {
-    event.preventDefault();
-    if (!isFormValid || items.length === 0 || phase === 'processing') return;
+    interceptPremium(event, async () => {
+      if (phase === 'processing') return;
 
-    setPhase('processing');
+      const freshStoreItems = normalizeCartLines(useCartStore.getState().items);
+      const orderLines = hasCartLines(checkoutLines)
+        ? normalizeCartLines(checkoutLines)
+        : freshStoreItems;
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, CHECKOUT_PROCESSING_MS);
+      if (!hasCartLines(orderLines)) return;
+      if (!isShippingComplete(shipping)) return;
+
+      const orderItems = orderLines.map((item) => ({
+        ...item,
+        quantity: Math.max(1, Number(item.quantity) || 1),
+        price: parseLinePrice(item.price),
+      }));
+
+      const orderTotal = computeCartTotal(orderItems);
+
+      setPhase('processing');
+
+      try {
+        await new Promise((resolve) => {
+          setTimeout(resolve, CHECKOUT_PROCESSING_MS);
+        });
+
+        const order = placeOrder({
+          items: orderItems,
+          paymentMethod,
+          shipping: {
+            fullName: shipping.fullName.trim(),
+            email: shipping.email.trim(),
+            address: shipping.address.trim(),
+            city: shipping.city.trim(),
+            pincode: shipping.pincode.trim(),
+          },
+          total: orderTotal,
+        });
+
+        clearCart();
+        setCheckoutLines([]);
+        cartSnapshottedRef.current = false;
+        setPlacedOrder(order);
+        setPhase('success');
+      } catch (error) {
+        console.error('Checkout submission failed:', error);
+        setPhase('checkout');
+      }
     });
-
-    const order = placeOrder({
-      items,
-      paymentMethod,
-      shipping,
-      total: estimatedTotal,
-    });
-
-    clearCart();
-    setPlacedOrder(order);
-    setPhase('success');
   };
 
-  if (!ready) {
-    return null;
+  const isSubmitting = phase === 'processing';
+  const canSubmit = hasCartLines(checkoutLines) && isShippingComplete(shipping) && !isSubmitting;
+
+  if (!ready || !cartHydrated) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-magenta" aria-label="Loading checkout" />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   if (phase === 'success' && (placedOrder || lastOrder)) {
@@ -101,9 +231,9 @@ export function CheckoutPage() {
   return (
     <DashboardLayout>
       <div className="relative min-h-full bg-background">
-        {phase === 'processing' && (
+        {isSubmitting && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="mx-4 w-full max-w-sm border border-borderColor bg-white dark:bg-[#150d22]/95 px-8 py-10 text-center shadow-2xl backdrop-blur-md">
+            <div className="mx-4 w-full max-w-sm border border-borderColor bg-white px-8 py-10 text-center shadow-2xl backdrop-blur-md dark:bg-[#150d22]/95">
               <Loader2 className="mx-auto h-10 w-10 animate-spin text-slate-900 dark:text-white" />
               <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-700 dark:text-gray-400">
                 Secure Payment
@@ -122,7 +252,7 @@ export function CheckoutPage() {
           <Link
             href="/catalog"
             onClick={() => clearLastOrder()}
-            className="mb-8 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-700 dark:text-gray-400 transition-colors hover:text-slate-900 dark:hover:text-white"
+            className="mb-8 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition-colors hover:text-slate-900 dark:text-gray-400 dark:hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to Catalog
@@ -138,7 +268,7 @@ export function CheckoutPage() {
             </p>
           </header>
 
-          <form onSubmit={handlePlaceOrder} className="lg:grid lg:grid-cols-5 lg:gap-12">
+          <form onSubmit={handlePlaceOrder} className="lg:grid lg:grid-cols-5 lg:gap-12" noValidate>
             <div className="space-y-10 lg:col-span-3">
               <section>
                 <h2 className="font-playfair text-lg font-semibold text-slate-900 dark:text-white">
@@ -222,19 +352,23 @@ export function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={!isFormValid || items.length === 0 || phase === 'processing'}
+                disabled={!canSubmit}
                 className="w-full bg-magenta py-5 text-xs font-bold uppercase tracking-[0.3em] text-white transition-colors hover:bg-magenta disabled:cursor-not-allowed disabled:bg-gray-300 lg:max-w-md"
               >
-                Place Order · {items.length > 0 ? `₹${estimatedTotal.toLocaleString('en-IN')}` : ''}
+                Place Order
+                {hasCartLines(checkoutLines)
+                  ? ` · ₹${estimatedTotal.toLocaleString('en-IN')}`
+                  : ''}
               </button>
             </div>
 
             <div className="mt-10 lg:col-span-2 lg:mt-0">
-              <CheckoutOrderSummary items={items} />
+              <CheckoutOrderSummary items={checkoutLines} />
             </div>
           </form>
         </div>
       </div>
+      <PremiumGateModal />
     </DashboardLayout>
   );
 }

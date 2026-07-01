@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Heart, ShoppingBag, X } from 'lucide-react';
@@ -14,11 +14,16 @@ const WISHLIST_THUMB_SIZES = '80px';
 
 export function WishlistDrawer() {
   const showToast = useToastStore((state) => state.showToast);
+  const [mounted, setMounted] = useState(false);
   const isOpen = useWishlistStore((state) => state.isOpen);
   const items = useWishlistStore((state) => state.items);
   const closeWishlist = useWishlistStore((state) => state.closeWishlist);
   const removeFromWishlist = useWishlistStore((state) => state.removeFromWishlist);
   const addToCart = useCartStore((state) => state.addToCart);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -44,7 +49,7 @@ export function WishlistDrawer() {
     showToast({ message: `${item.name} moved to your bag.`, variant: 'success' });
   };
 
-  if (typeof document === 'undefined') return null;
+  if (!mounted) return null;
 
   return createPortal(
     <>

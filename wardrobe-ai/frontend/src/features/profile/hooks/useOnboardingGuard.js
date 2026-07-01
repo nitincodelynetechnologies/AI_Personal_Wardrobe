@@ -26,7 +26,7 @@ export function useOnboardingGuard() {
       const authed = useAuthStore.getState().isAuthenticated;
 
       if (!authed && !token) {
-        if (!cancelled) router.replace('/login/face');
+        if (!cancelled) setReady(true);
         return;
       }
 

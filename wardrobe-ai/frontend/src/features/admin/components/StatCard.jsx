@@ -47,6 +47,24 @@ const STAT_CARD_THEMES = {
     iconBg: 'bg-orange-500/15',
     ring: 'ring-orange-500/25',
   },
+  'ai-tryons': {
+    icon: Sparkles,
+    iconClass: 'text-magenta',
+    iconBg: 'bg-magenta/15',
+    ring: 'ring-magenta/25',
+  },
+  'total-orders': {
+    icon: Package,
+    iconClass: 'text-cyan-400',
+    iconBg: 'bg-cyan-500/15',
+    ring: 'ring-cyan-500/25',
+  },
+  'registered-users': {
+    icon: Users,
+    iconClass: 'text-blue-400',
+    iconBg: 'bg-blue-500/15',
+    ring: 'ring-blue-500/25',
+  },
   'total-registered': {
     icon: UserPlus,
     iconClass: 'text-blue-400',
@@ -183,12 +201,12 @@ export function StatCard({
         'admin-card group transition-all duration-200',
         isInteractive && 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_0_32px_rgba(233,30,140,0.12)]',
         !isInteractive && 'hover:shadow-[0_0_32px_rgba(233,30,140,0.12)]',
-        isActive && cn('ring-2 ring-offset-2 ring-offset-[#150d22]', activeRingClass),
+        isActive && cn('ring-2 ring-offset-2 ring-offset-white dark:ring-offset-[#150d22]', activeRingClass),
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
           {label}
         </p>
         <div
@@ -202,7 +220,9 @@ export function StatCard({
         </div>
       </div>
 
-      <p className="mt-4 font-playfair text-4xl font-bold tracking-tight text-white">{value}</p>
+      <p className="mt-4 font-sans text-4xl font-extrabold tracking-tight text-gray-900 tabular-nums dark:text-gray-100">
+        {value}
+      </p>
 
       {(trend || caption) && (
         <div className="mt-4 flex items-center justify-between gap-2">
@@ -225,7 +245,7 @@ export function StatCard({
           ) : (
             <span />
           )}
-          {caption && <span className="text-xs text-slate-500">{caption}</span>}
+          {caption && <span className="text-xs text-gray-500 dark:text-gray-400">{caption}</span>}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
@@ -8,11 +8,14 @@ import { Minus, Plus, ShoppingBag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCatalogPrice } from '@/features/catalog/constants/catalogOptions';
 import { useCartStore } from '@/features/commerce/store/useCartStore';
+import { usePremiumGate } from '@/features/auth/hooks/usePremiumGate';
 
 const CART_THUMB_SIZES = '80px';
 
 export function CartDrawer() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const { interceptPremium, PremiumGateModal } = usePremiumGate();
   const isOpen = useCartStore((state) => state.isOpen);
   const items = useCartStore((state) => state.items);
   const closeCart = useCartStore((state) => state.closeCart);
@@ -21,6 +24,10 @@ export function CartDrawer() {
   const estimatedTotal = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -39,13 +46,16 @@ export function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
-  const handleCheckout = () => {
-    if (items.length === 0) return;
-    closeCart();
-    router.push('/checkout');
+  const handleCheckout = (event) => {
+    interceptPremium(event, () => {
+      const cartItems = useCartStore.getState().items;
+      if (!Array.isArray(cartItems) || cartItems.length === 0) return;
+      closeCart();
+      router.push('/checkout');
+    });
   };
 
-  if (typeof document === 'undefined') return null;
+  if (!mounted) return null;
 
   return createPortal(
     <>
@@ -179,12 +189,13 @@ export function CartDrawer() {
             type="button"
             onClick={handleCheckout}
             disabled={items.length === 0}
-            className="w-full bg-magenta py-4 text-xs font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-magenta disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="w-full bg-magenta py-4 text-xs font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-magenta disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-300"
           >
             Proceed to Checkout
           </button>
         </footer>
       </aside>
+      <PremiumGateModal />
     </>,
     document.body,
   );

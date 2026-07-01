@@ -14,7 +14,6 @@ import { WardrobeGridSkeleton } from '@/features/wardrobe/components/WardrobeGri
 import { WardrobeEmptyState } from '@/features/wardrobe/components/WardrobeEmptyState';
 import { UploadItemModal } from '@/features/wardrobe/components/UploadItemModal';
 import { useWardrobeStore, getFilteredItems } from '@/features/wardrobe/store/useWardrobeStore';
-import { DEFAULT_WARDROBE_ITEMS } from '@/features/wardrobe/constants/wardrobeDefaultItems';
 
 export function WardrobePage() {
   const items = useWardrobeStore((state) => state.items);
@@ -26,8 +25,7 @@ export function WardrobePage() {
 
   if (!ready) return null;
 
-  const displayItems = items.length > 0 ? items : DEFAULT_WARDROBE_ITEMS;
-  const filteredItems = getFilteredItems(displayItems, categoryFilter);
+  const filteredItems = getFilteredItems(items, categoryFilter);
   const showEmpty = !isLoading && filteredItems.length === 0;
 
   return (
@@ -38,7 +36,7 @@ export function WardrobePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-violet">Phase 3</p>
             <h1 className="font-playfair text-2xl font-semibold sm:text-3xl">My Wardrobe</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {displayItems.length} item{displayItems.length === 1 ? '' : 's'} in your digital closet
+              {items.length} item{items.length === 1 ? '' : 's'} in your digital closet
             </p>
           </div>
           <Button className="gap-2 self-start sm:self-auto" onClick={() => setUploadOpen(true)}>
@@ -55,15 +53,15 @@ export function WardrobePage() {
           </Alert>
         )}
 
-        {isLoading && displayItems.length === 0 ? (
+        {isLoading && items.length === 0 ? (
           <WardrobeGridSkeleton />
         ) : showEmpty ? (
           <WardrobeEmptyState
             onAddClick={() => setUploadOpen(true)}
-            hasFilter={categoryFilter !== 'All' && displayItems.length > 0}
+            hasFilter={categoryFilter !== 'All' && items.length > 0}
           />
         ) : (
-          <WardrobeGrid items={filteredItems} categoryFilter={categoryFilter} />
+          <WardrobeGrid items={items} categoryFilter={categoryFilter} />
         )}
       </div>
 

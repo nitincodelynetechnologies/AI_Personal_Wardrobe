@@ -22,11 +22,11 @@ export function AdminChartTooltip({
   return (
     <div
       className={cn(
-        'pointer-events-none rounded-lg border border-white/10 bg-[#150d22] px-4 py-3 shadow-[0_4px_24px_rgba(0,0,0,0.4)]',
+        'pointer-events-none rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-md dark:border-white/10 dark:bg-[#150d22] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)]',
         className,
       )}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
         {label}
       </p>
       <p className="mt-1 font-playfair text-lg font-semibold text-magenta">{formatted}</p>

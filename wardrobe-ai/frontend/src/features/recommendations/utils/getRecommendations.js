@@ -133,9 +133,46 @@ function getCompleteLookRecommendations(pool, context, limit = 5) {
   ).slice(0, limit);
 }
 
+function getStyleRecommendations(pool, fashionStyle, limit = 5) {
+  const normalized = fashionStyle?.toLowerCase().replace(/\s+/g, '_') ?? 'casual';
+
+  const STYLE_KEYWORDS = {
+    casual: ['casual', 'everyday', 'comfort', 'relaxed', 'linen'],
+    formal: ['formal', 'tailored', 'suit', 'blazer'],
+    streetwear: ['streetwear', 'urban', 'hoodie', 'sport', 'sneaker'],
+    minimalist: ['minimal', 'minimalist', 'neutral', 'monochrome'],
+    bohemian: ['floral', 'summer', 'dress', 'layered', 'elegant'],
+    classic: ['classic', 'tailored', 'timepiece', 'leather', 'watch'],
+  };
+
+  const keywords = STYLE_KEYWORDS[normalized] ?? [normalized.replace(/_/g, '')];
+
+  const ranked = pool
+    .map((product) => {
+      const tags = (product.style_tags ?? []).map((tag) => tag.toLowerCase());
+      const haystack = `${product.name} ${product.category} ${product.brand ?? ''} ${tags.join(' ')}`.toLowerCase();
+      const score = keywords.reduce((total, keyword) => {
+        if (tags.includes(keyword) || haystack.includes(keyword)) return total + 2;
+        return total;
+      }, 0);
+
+      return { product, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => right.score - left.score);
+
+  const matched = dedupeById(ranked.map((entry) => entry.product)).slice(0, limit);
+  if (matched.length >= limit) return matched;
+
+  const matchedKeys = new Set(matched.map(getProductKey));
+  const fallback = pool.filter((product) => !matchedKeys.has(getProductKey(product)));
+
+  return dedupeById([...matched, ...fallback]).slice(0, limit);
+}
+
 /**
  * Smart recommendation stub — filters catalog pool by section theme.
- * @param {'body'|'color'|'complete'} type
+ * @param {'body'|'color'|'complete'|'style'} type
  * @param {object} context
  * @param {Array} catalogProducts
  */
@@ -152,6 +189,8 @@ export function getRecommendations(type, context = {}, catalogProducts = []) {
       return getColorRecommendations(pool, colors, limit);
     case RECOMMENDATION_TYPES.COMPLETE:
       return getCompleteLookRecommendations(pool, context, limit);
+    case RECOMMENDATION_TYPES.STYLE:
+      return getStyleRecommendations(pool, context.fashionStyle, limit);
     default:
       return dedupeById(pool).slice(0, limit);
   }

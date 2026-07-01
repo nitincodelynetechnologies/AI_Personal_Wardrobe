@@ -2,10 +2,9 @@
 
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { FRONT_CAPTURE_STEP } from '@/features/auth/constants/captureSteps';
 
 export const CameraViewfinder = forwardRef(function CameraViewfinder(
-  { isReady, isVerified = false, statusMessage, className },
+  { isReady, isVerified = false, className },
   ref,
 ) {
   return (
@@ -60,25 +59,6 @@ export const CameraViewfinder = forwardRef(function CameraViewfinder(
               )}
               aria-hidden
             />
-          </div>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3">
-          <div className="glass-panel rounded-lg px-3 py-2 text-center">
-            <p
-              className={cn(
-                'text-[10px] font-medium uppercase tracking-widest sm:text-xs',
-                isVerified ? 'text-magenta' : 'text-violet/80',
-              )}
-            >
-              {isVerified ? 'Face Verified' : FRONT_CAPTURE_STEP.label}
-            </p>
-            <p className="mt-0.5 text-xs text-foreground sm:text-sm">
-              {statusMessage ||
-                (isVerified
-                  ? 'Face detected — tap capture when ready'
-                  : FRONT_CAPTURE_STEP.instruction)}
-            </p>
           </div>
         </div>
 

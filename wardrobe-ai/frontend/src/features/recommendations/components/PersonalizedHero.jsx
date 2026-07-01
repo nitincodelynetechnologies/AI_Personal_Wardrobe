@@ -35,7 +35,7 @@ export function PersonalizedHero({
     <section className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-white/5 dark:shadow-none">
       <div className="absolute inset-0 bg-gradient-to-r from-[#fff5f8] via-[#fcf5ff] to-[#f5f7ff] dark:from-[#150d22] dark:via-[#150d22] dark:to-[#0a0612]" />
 
-      <div className="absolute inset-0 hidden grid-cols-3 opacity-0 dark:grid dark:opacity-100">
+      <div className="absolute inset-0 hidden grid-cols-3 sm:grid">
         {HERO_EDITORIAL_IMAGES.slice(0, 3).map((src, index) => (
           <div key={src} className="relative min-h-[340px]">
             <Image
@@ -56,13 +56,13 @@ export function PersonalizedHero({
           alt=""
           fill
           sizes="100vw"
-          className="object-cover opacity-0 dark:opacity-100"
+          className="object-cover"
           priority
         />
       </div>
 
-      <div className="absolute inset-0 hidden bg-gradient-to-r from-obsidian via-obsidian/85 to-obsidian/40 dark:block" />
-      <div className="absolute inset-0 hidden bg-gradient-to-t from-obsidian via-obsidian/30 to-magenta/10 dark:block" />
+      <div className="absolute inset-0 bg-gradient-to-r from-white/85 via-white/80 to-white/55 dark:from-black/80 dark:via-black/80 dark:to-black/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-white/50 via-white/20 to-transparent dark:from-obsidian dark:via-obsidian/30 dark:to-magenta/10" />
 
       <div className="relative flex min-h-[340px] flex-col justify-end px-6 py-8 sm:min-h-[380px] sm:px-10 sm:py-10">
         <span className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-magenta px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(233,30,140,0.4)]">

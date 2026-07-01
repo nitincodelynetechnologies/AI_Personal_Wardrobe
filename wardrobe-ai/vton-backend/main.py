@@ -20,7 +20,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from gradio_client import Client, handle_file
+from gradio_client import handle_file
+
+from gradio_client_compat import create_gradio_client, is_hf_token_configured
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,15 +33,7 @@ TEMP_DIR = Path(os.getenv("VTON_TEMP_DIR", ".vton-temp"))
 USE_MOCK = os.getenv("VTON_MOCK", "false").lower() == "true"
 GPU_FALLBACK = os.getenv("VTON_GPU_FALLBACK", "true").lower() == "true"
 
-_client: Client | None = None
-
-
-def _get_hf_token() -> str | None:
-    for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_TOKEN"):
-        value = os.getenv(key, "").strip()
-        if value:
-            return value
-    return None
+_client = None
 
 
 def _mock_tryon_response(user_bytes: bytes, mime: str, *, gpu_fallback: bool = False) -> dict:
@@ -83,22 +77,20 @@ def _gpu_fallback_or_error(user_bytes: bytes, mime: str, exc: Exception) -> dict
     return {"success": False, "error": str(exc)}
 
 
-def get_client() -> Client:
+def get_client():
     global _client
     if _client is None:
-        hf_token = _get_hf_token()
+        token_configured = is_hf_token_configured()
         logger.info(
-            "Connecting to Gradio space: %s (hf_token=%s)",
+            "Connecting to Gradio space: %s (HF_TOKEN env=%s)",
             IDM_VTON_SPACE,
-            "set" if hf_token else "missing",
+            "set" if token_configured else "missing",
         )
-        if hf_token:
-            _client = Client(IDM_VTON_SPACE, hf_token=hf_token)
-        else:
+        if not token_configured:
             logger.warning(
-                "HF_TOKEN not configured — unauthenticated requests use strict public ZeroGPU limits"
+                "HF_TOKEN not set in environment — unauthenticated requests use strict public ZeroGPU limits"
             )
-            _client = Client(IDM_VTON_SPACE)
+        _client = create_gradio_client(IDM_VTON_SPACE)
     return _client
 
 
@@ -154,7 +146,7 @@ async def health():
         "service": "idm-vton",
         "mock": USE_MOCK,
         "gpu_fallback": GPU_FALLBACK,
-        "hf_authenticated": _get_hf_token() is not None,
+        "hf_authenticated": is_hf_token_configured(),
     }
 
 

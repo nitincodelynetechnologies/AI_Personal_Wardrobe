@@ -1,1 +1,10 @@
-export { CatalogPage as default } from '@/features/catalog/components/CatalogPage';
+import { Suspense } from 'react';
+import { CatalogPage } from '@/features/catalog/components/CatalogPage';
+
+export default function CatalogRoutePage() {
+  return (
+    <Suspense fallback={null}>
+      <CatalogPage />
+    </Suspense>
+  );
+}

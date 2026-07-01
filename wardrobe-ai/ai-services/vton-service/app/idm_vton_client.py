@@ -4,37 +4,27 @@ import os
 import uuid
 from pathlib import Path
 
-from gradio_client import Client, handle_file
+from gradio_client import handle_file
 
 from app.config import get_settings
+from app.gradio_client_compat import create_gradio_client, is_hf_token_configured
 
 logger = logging.getLogger(__name__)
 
-_client: Client | None = None
+_client = None
 
 
-def _get_hf_token() -> str | None:
-    for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_TOKEN"):
-        value = os.getenv(key, "").strip()
-        if value:
-            return value
-    return None
-
-
-def get_gradio_client() -> Client:
+def get_gradio_client():
     global _client
     if _client is None:
         settings = get_settings()
-        hf_token = settings.get("hf_token")
+        token_configured = is_hf_token_configured()
         logger.info(
-            "Connecting to IDM-VTON space: %s (hf_token=%s)",
+            "Connecting to IDM-VTON space: %s (HF_TOKEN env=%s)",
             settings["idm_space"],
-            "set" if hf_token else "missing",
+            "set" if token_configured else "missing",
         )
-        if hf_token:
-            _client = Client(settings["idm_space"], hf_token=hf_token)
-        else:
-            _client = Client(settings["idm_space"])
+        _client = create_gradio_client(settings["idm_space"])
     return _client
 
 

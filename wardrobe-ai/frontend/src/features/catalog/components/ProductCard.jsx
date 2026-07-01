@@ -14,6 +14,7 @@ import {
 import { NON_3D_CATALOG_CATEGORIES } from '@/features/catalog/constants/garmentModels';
 import { useCartStore } from '@/features/commerce/store/useCartStore';
 import { useWishlistStore } from '@/features/commerce/store/useWishlistStore';
+import { usePremiumGate } from '@/features/auth/hooks/usePremiumGate';
 import { preloadVirtualTryOnModal } from '@/features/try-on/loadVirtualTryOnModal';
 
 const Mini3DViewer = dynamic(() => import('@/components/Mini3DViewer'), {
@@ -23,8 +24,9 @@ const Mini3DViewer = dynamic(() => import('@/components/Mini3DViewer'), {
   ),
 });
 
-export function ProductCard({ product, onTryOn, className }) {
+export function ProductCard({ product, onTryOn, onViewDetails, guestMode = false, className }) {
   const showToast = useToastStore((state) => state.showToast);
+  const { interceptPremium, PremiumGateModal } = usePremiumGate();
   const addToCart = useCartStore((state) => state.addToCart);
   const closeWishlist = useWishlistStore((state) => state.closeWishlist);
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
@@ -70,25 +72,58 @@ export function ProductCard({ product, onTryOn, className }) {
     setIsImageLoading(false);
   };
 
-  const handleAddToCart = () => {
-    closeWishlist();
-    addToCart(product);
-    showToast({ message: `${product.name} added to your bag.`, variant: 'success' });
+  const handleAddToCart = (event) => {
+    interceptPremium(event, () => {
+      closeWishlist();
+      addToCart(product);
+      showToast({ message: `${product.name} added to your bag.`, variant: 'success' });
+    });
   };
 
-  const handleToggleWishlist = () => {
-    const added = toggleWishlist(product);
-    showToast({
-      message: added
-        ? `${product.name} saved to wishlist.`
-        : `${product.name} removed from wishlist.`,
-      variant: 'success',
+  const handleToggleWishlist = (event) => {
+    interceptPremium(event, () => {
+      const added = toggleWishlist(product);
+      showToast({
+        message: added
+          ? `${product.name} saved to wishlist.`
+          : `${product.name} removed from wishlist.`,
+        variant: 'success',
+      });
+    });
+  };
+
+  const handleOpenDetails = () => {
+    onViewDetails?.(product);
+  };
+
+  const handleTryOnClick = (event) => {
+    interceptPremium(event, () => {
+      onTryOn?.(product);
     });
   };
 
   return (
     <article className={cn('group flex flex-col', className)}>
-      <div className="relative aspect-[3/4] min-h-[280px] overflow-hidden rounded-t-xl bg-white dark:bg-[#150d22] shadow-md">
+      <div
+        className={cn(
+          'relative aspect-[3/4] min-h-[280px] overflow-hidden rounded-t-xl bg-white dark:bg-[#150d22] shadow-md',
+          onViewDetails && 'cursor-pointer',
+        )}
+        onClick={onViewDetails ? handleOpenDetails : undefined}
+        onKeyDown={
+          onViewDetails
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleOpenDetails();
+                }
+              }
+            : undefined
+        }
+        role={onViewDetails ? 'button' : undefined}
+        tabIndex={onViewDetails ? 0 : undefined}
+        aria-label={onViewDetails ? `View details for ${product.name}` : undefined}
+      >
         {glbUrl ? (
           <Mini3DViewer key={`card-3d-${product.id}-${glbUrl}`} glbUrl={glbUrl} className="absolute inset-0" />
         ) : (
@@ -121,6 +156,7 @@ export function ProductCard({ product, onTryOn, className }) {
           </span>
         )}
 
+        {!guestMode && (
         <button
           type="button"
           onClick={handleToggleWishlist}
@@ -135,13 +171,19 @@ export function ProductCard({ product, onTryOn, className }) {
         >
           <Heart className={cn('h-3.5 w-3.5', isInWishlist && 'fill-current')} />
         </button>
+        )}
 
-        <div className="absolute inset-x-0 bottom-0 flex translate-y-full flex-col gap-2 p-3 transition-transform duration-300 group-hover:translate-y-0 max-md:translate-y-0">
+        <div
+          className="absolute inset-x-0 bottom-0 flex translate-y-full flex-col gap-2 p-3 transition-transform duration-300 group-hover:translate-y-0 max-md:translate-y-0"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          role="presentation"
+        >
           <button
             type="button"
             onMouseEnter={() => void preloadVirtualTryOnModal()}
             onFocus={() => void preloadVirtualTryOnModal()}
-            onClick={() => onTryOn?.(product)}
+            onClick={handleTryOnClick}
             className="flex w-full items-center justify-center gap-2 border border-white/80 bg-white dark:bg-[#150d22]/95 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-magenta backdrop-blur-sm transition-colors hover:bg-slate-100 dark:hover:bg-[#1a1028]"
           >
             <Sparkles className="h-3.5 w-3.5 text-violet" />
@@ -149,7 +191,7 @@ export function ProductCard({ product, onTryOn, className }) {
           </button>
           <button
             type="button"
-            onClick={handleAddToCart}
+            onClick={(event) => handleAddToCart(event)}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-magenta py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition-all duration-300 hover:bg-magenta/80 hover:shadow-[0_0_20px_rgba(233,30,140,0.5)]"
           >
             <ShoppingBag className="h-3.5 w-3.5" />
@@ -162,11 +204,30 @@ export function ProductCard({ product, onTryOn, className }) {
         <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-slate-700 dark:text-gray-400">
           {product.brand}
         </p>
-        <h3 className="font-playfair text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
+        <h3
+          className={cn(
+            'font-playfair text-sm font-semibold tracking-tight text-slate-900 dark:text-white',
+            onViewDetails && 'cursor-pointer transition-colors hover:text-magenta',
+          )}
+          onClick={onViewDetails ? handleOpenDetails : undefined}
+          onKeyDown={
+            onViewDetails
+              ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleOpenDetails();
+                  }
+                }
+              : undefined
+          }
+          role={onViewDetails ? 'button' : undefined}
+          tabIndex={onViewDetails ? 0 : undefined}
+        >
           {product.name}
         </h3>
         <p className="text-sm font-medium text-slate-900 dark:text-white">{formatCatalogPrice(product.price)}</p>
       </div>
+      <PremiumGateModal />
     </article>
   );
 }

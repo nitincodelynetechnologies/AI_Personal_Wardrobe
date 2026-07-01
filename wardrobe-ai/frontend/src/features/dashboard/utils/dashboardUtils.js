@@ -64,7 +64,12 @@ export function getPrimaryStyle(fashionDna, preferences) {
 
 export function getRecentWardrobeItems(items = [], limit = 4) {
   return [...items]
-    .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
+    .sort((left, right) => {
+      const leftTime = new Date(left.created_at ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.created_at ?? right.createdAt ?? 0).getTime();
+      if (leftTime !== rightTime) return rightTime - leftTime;
+      return String(right.id ?? '').localeCompare(String(left.id ?? ''));
+    })
     .slice(0, limit);
 }
 

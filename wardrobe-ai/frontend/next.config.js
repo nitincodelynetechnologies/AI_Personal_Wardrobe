@@ -5,7 +5,7 @@ const nextCacheDir = process.env.NEXT_DIST_DIR || 'node_modules/.cache/wardrobe-
 /** @type {import('next').NextConfig} */
 const backendApiUrl = process.env.BACKEND_API_URL || 'http://localhost:3001/api';
 const backendOrigin = backendApiUrl.replace(/\/api\/?$/, '') || 'http://localhost:3001';
-const vtonBackendUrl = process.env.VTON_BACKEND_URL || 'http://127.0.0.1:8000';
+const vtonBackendUrl = process.env.VTON_BACKEND_URL || 'http://127.0.0.1:8010';
 
 function buildImageRemotePatterns() {
   const patterns = [

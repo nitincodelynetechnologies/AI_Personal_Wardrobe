@@ -15,12 +15,13 @@ import { getNetworkErrorMessage } from '@/features/auth/services/apiClient';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 import {
-
   STYLIST_CHAT_GREETING,
-
   STYLIST_QUICK_PROMPTS,
-
 } from '@/features/stylist-chat/constants/stylistChatOptions';
+import {
+  consumePendingStylistChatOpen,
+  OPEN_STYLIST_CHAT_EVENT,
+} from '@/features/stylist-chat/utils/stylistChatUi';
 
 import { sendStylistChatMessage } from '@/features/stylist-chat/services/stylistChatService';
 
@@ -191,6 +192,21 @@ export function StylistChatbot() {
     return undefined;
 
   }, [isOpen]);
+
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    if (consumePendingStylistChatOpen()) {
+      setIsOpen(true);
+    }
+
+    const handleOpenRequest = () => setIsOpen(true);
+    window.addEventListener(OPEN_STYLIST_CHAT_EVENT, handleOpenRequest);
+
+    return () => window.removeEventListener(OPEN_STYLIST_CHAT_EVENT, handleOpenRequest);
+  }, []);
 
 
 

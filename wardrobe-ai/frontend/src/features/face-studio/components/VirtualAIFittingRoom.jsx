@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bookmark, Shirt, Sparkles } from 'lucide-react';
+import { Heart, Shirt, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToastStore } from '@/components/ui/toaster';
 import { useAuthUser } from '@/features/auth/hooks/useAuthUser';
@@ -13,6 +13,7 @@ import { requestIdmVton, fetchVtonHealth } from '@/features/face-studio/services
 import { VtonMockPairingView } from '@/features/face-studio/components/VtonMockPairingView';
 import { useWardrobe } from '@/features/wardrobe/hooks/useWardrobe';
 import { useWardrobeStore } from '@/features/wardrobe/store/useWardrobeStore';
+import { usePremiumGate } from '@/features/auth/hooks/usePremiumGate';
 
 const TYPE_LABELS = {
   top: 'Tops',
@@ -30,6 +31,7 @@ function handleWardrobeImageError(event) {
 export function VirtualAIFittingRoom({ userBodyImage, className }) {
   const { userId } = useAuthUser();
   const showToast = useToastStore((state) => state.showToast);
+  const { gatePremium, PremiumGateModal } = usePremiumGate();
   const wardrobeItems = useWardrobeStore((state) => state.items);
 
   const { isLoading: isWardrobeLoading } = useWardrobe();
@@ -105,13 +107,15 @@ export function VirtualAIFittingRoom({ userBodyImage, className }) {
           }
           setIsVtonSuccess(true);
           showToast({
-            message: data.gpu_fallback
-              ? data.fallback_reason ||
-                `Hugging Face GPU busy — dev pairing for ${garment.name}. Retry later for real AI.`
-              : data.mock
-                ? `Selected ${garment.name} — dev pairing (set VTON_MOCK=false for real AI fit)`
-                : `IDM-VTON fit applied: ${garment.name}`,
-            variant: 'success',
+            message: data.backend_offline
+              ? data.fallback_reason
+              : data.gpu_fallback
+                ? data.fallback_reason ||
+                  `Hugging Face GPU busy — dev pairing for ${garment.name}. Retry later for real AI.`
+                : data.mock
+                  ? `Selected ${garment.name} — dev pairing (set VTON_MOCK=false for real AI fit)`
+                  : `IDM-VTON fit applied: ${garment.name}`,
+            variant: data.backend_offline ? 'default' : 'success',
           });
         } else {
           throw new Error(data.error || 'AI processing failed');
@@ -143,46 +147,92 @@ export function VirtualAIFittingRoom({ userBodyImage, className }) {
   );
 
   const handleSaveLook = useCallback(() => {
-    if (!vtonResultImage) {
-      alert('⚠️ No AI generated fit found to save!');
-      return;
-    }
+    gatePremium(() => {
+      const imageToSave =
+        vtonResultImage ||
+        (vtonPreviewMode === 'mock' && selectedGarment ? canvasImage : null);
 
-    try {
-      const existingLooks = readSavedLooks(userId);
-
-      const newLook = {
-        id: Date.now(),
-        finalImage: vtonResultImage,
-        garmentName: selectedGarment?.name || 'Custom Fit',
-        category: selectedGarment?.type || 'Outfit',
-        date: new Date().toLocaleDateString(),
-      };
-
-      const isDuplicate = existingLooks.some((look) => look.finalImage === vtonResultImage);
-      if (isDuplicate) {
-        alert('ℹ️ This look is already saved in your Personal Closet!');
+      if (!imageToSave) {
+        showToast({
+          message: 'No AI generated fit found to save. Run a virtual try-on first.',
+          variant: 'destructive',
+        });
         return;
       }
 
-      writeSavedLooks([...existingLooks, newLook], userId);
+      try {
+        const existingLooks = readSavedLooks(userId);
 
-      alert('✨ Success: Look saved to your Personal Closet! Check it out in your profile.');
-    } catch (error) {
-      console.error('Storage Error:', error);
-      const isQuotaError =
-        error instanceof DOMException &&
-        (error.name === 'QuotaExceededError' || error.code === 22);
-      alert(
-        isQuotaError
-          ? '⚠️ Storage full! Could not save the look. Try clearing some older saved looks first.'
-          : '⚠️ Could not save the look. Please try again.',
-      );
-    }
-  }, [selectedGarment, userId, vtonResultImage]);
+        const newLook = {
+          id: Date.now(),
+          image: imageToSave,
+          garmentName: selectedGarment?.name || 'Custom Fit',
+          category: selectedGarment?.type || 'Outfit',
+          garmentId: selectedGarment?.id ?? null,
+          garmentImage: selectedGarment?.img ?? null,
+          date: new Date().toISOString(),
+        };
+
+        const isDuplicate = existingLooks.some(
+          (look) =>
+            (look.image ?? look.finalImage) === imageToSave &&
+            (look.garmentName ?? look.garment?.name) === newLook.garmentName,
+        );
+        if (isDuplicate) {
+          showToast({
+            message: 'This look is already saved in your Personal Closet.',
+            variant: 'default',
+          });
+          return;
+        }
+
+        const saved = writeSavedLooks([...existingLooks, newLook], userId);
+        if (!saved) {
+          showToast({
+            message: 'Could not save the look. Storage may be full — try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        showToast({
+          message: '✨ Look saved to Personal Closet!',
+          variant: 'success',
+        });
+      } catch (error) {
+        console.error('Storage Error:', error);
+        const isQuotaError =
+          error instanceof DOMException &&
+          (error.name === 'QuotaExceededError' || error.code === 22);
+        showToast({
+          message: isQuotaError
+            ? 'Storage full! Clear some older saved looks and try again.'
+            : 'Could not save the look. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    });
+  }, [
+    canvasImage,
+    gatePremium,
+    selectedGarment,
+    showToast,
+    userId,
+    vtonPreviewMode,
+    vtonResultImage,
+  ]);
+
+  const handleClearLook = useCallback(() => {
+    setIsVtonSuccess(false);
+    setVtonResultImage(null);
+    setVtonPreviewMode(null);
+    setSelectedGarment(null);
+  }, []);
 
   const showAiResult = isVtonSuccess && vtonPreviewMode === 'ai' && vtonResultImage;
   const showMockPairing = isVtonSuccess && vtonPreviewMode === 'mock' && selectedGarment;
+  const showPostGenerationActions =
+    !isGeneratingVTON && selectedGarment && (showAiResult || showMockPairing);
 
   return (
     <section
@@ -209,60 +259,70 @@ export function VirtualAIFittingRoom({ userBodyImage, className }) {
       </div>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="relative flex h-[600px] w-full items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-[#0a0612]">
-          {isGeneratingVTON ? (
-            <div className="flex flex-col items-center justify-center px-6 text-center">
-              <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-pink-500 border-t-transparent shadow-[0_0_15px_#ec4899]" />
-              <p className="animate-pulse rounded-lg bg-black/50 px-4 py-2 text-sm font-bold text-pink-400 backdrop-blur-md">
-                {vtonAiReady
-                  ? 'AI is fitting the garment to your body… (2–5 minutes, please wait)'
-                  : 'AI is fitting the garment perfectly to your body… (~15–30 secs)'}
-              </p>
-              <p className="mt-2 text-xs text-slate-500">
-                Running IDM-VTON on {selectedGarment?.name ?? 'garment'}
-              </p>
-            </div>
-          ) : showAiResult ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={vtonResultImage}
-              alt="AI virtual try-on result"
-              className="h-full w-full object-contain"
-            />
-          ) : showMockPairing ? (
-            <VtonMockPairingView
-              bodyImage={canvasImage}
-              garment={selectedGarment}
-              aiReady={vtonAiReady}
-              isGenerating={isGeneratingVTON}
-              onRunAiFit={() => handleVirtualTryOn(selectedGarment, { forceAi: true })}
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={canvasImage}
-              alt="User body scan"
-              className="h-full w-full object-contain"
-            />
-          )}
+        <div className="flex w-full flex-col gap-4">
+          <div className="relative flex h-[520px] w-full items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-[#0a0612] sm:h-[560px]">
+            {isGeneratingVTON ? (
+              <div className="flex flex-col items-center justify-center px-6 text-center">
+                <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-pink-500 border-t-transparent shadow-[0_0_15px_#ec4899]" />
+                <p className="animate-pulse rounded-lg bg-black/50 px-4 py-2 text-sm font-bold text-pink-400 backdrop-blur-md">
+                  {vtonAiReady
+                    ? 'AI is fitting the garment to your body… (2–5 minutes, please wait)'
+                    : 'AI is fitting the garment perfectly to your body… (~15–30 secs)'}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  Running IDM-VTON on {selectedGarment?.name ?? 'garment'}
+                </p>
+              </div>
+            ) : showAiResult ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={vtonResultImage}
+                alt="AI virtual try-on result"
+                className="h-full w-full object-contain"
+              />
+            ) : showMockPairing ? (
+              <VtonMockPairingView
+                bodyImage={canvasImage}
+                garment={selectedGarment}
+                aiReady={vtonAiReady}
+                isGenerating={isGeneratingVTON}
+                onRunAiFit={() => handleVirtualTryOn(selectedGarment, { forceAi: true })}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={canvasImage}
+                alt="User body scan"
+                className="h-full w-full object-contain"
+              />
+            )}
 
-          {!isGeneratingVTON && showAiResult && selectedGarment && (
-            <>
+            {!isGeneratingVTON && showPostGenerationActions && (
               <div className="absolute left-4 top-4 rounded-full border border-emerald-500 bg-emerald-500/20 px-3 py-1 text-[10px] uppercase tracking-widest text-emerald-400 backdrop-blur-md">
                 {vtonPreviewMode === 'mock' ? 'Dev pairing' : 'IDM-VTON'}: {selectedGarment.name}
               </div>
+            )}
+          </div>
 
-              <div className="absolute bottom-6 right-6 z-30">
-                <button
-                  type="button"
-                  onClick={handleSaveLook}
-                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-transform hover:scale-105"
-                >
-                  <Bookmark className="h-5 w-5" aria-hidden />
-                  Save Look
-                </button>
-              </div>
-            </>
+          {showPostGenerationActions && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0a0612]/80 p-3 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={handleSaveLook}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-pink-600 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(236,72,153,0.35)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Heart className="h-4 w-4 fill-current" aria-hidden />
+                Save to Closet
+              </button>
+              <button
+                type="button"
+                onClick={handleClearLook}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-transparent px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Discard
+              </button>
+            </div>
           )}
         </div>
 
@@ -318,17 +378,9 @@ export function VirtualAIFittingRoom({ userBodyImage, className }) {
             )}
           </div>
 
-          {isVtonSuccess && !isGeneratingVTON && (
-            <button
-              type="button"
-              onClick={resetVtonState}
-              className="shrink-0 w-full rounded-lg border border-white/10 py-2 text-xs font-medium text-slate-400 transition-colors hover:border-white/20 hover:text-white"
-            >
-              Reset to original body scan
-            </button>
-          )}
         </div>
       </div>
+      <PremiumGateModal />
     </section>
   );
 }

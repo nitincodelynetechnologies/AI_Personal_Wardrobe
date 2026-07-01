@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Camera, RotateCcw } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { useToastStore } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
 import { CameraViewfinder } from '@/features/auth/components/CameraViewfinder';
 import { LivenessIndicator } from '@/features/auth/components/LivenessIndicator';
 import { RegistrationSubmitPanel } from '@/features/auth/components/RegistrationSubmitPanel';
@@ -14,6 +15,7 @@ import {
   AUTH_FORM_CARD,
   AUTH_PRIMARY_BUTTON,
 } from '@/features/auth/components/AuthSplitShell';
+import { FRONT_CAPTURE_STEP } from '@/features/auth/constants/captureSteps';
 import { useCamera } from '@/features/auth/hooks/useCamera';
 import { useCaptureFlow } from '@/features/auth/hooks/useCaptureFlow';
 import { useFaceDetection } from '@/features/auth/hooks/useFaceDetection';
@@ -142,9 +144,43 @@ export function FaceRegistrationPage() {
                 ref={videoRef}
                 isReady={isReady}
                 isVerified={isVerified}
-                statusMessage={modelError || statusMessage}
               />
             </div>
+
+            {!isComplete && (
+              <div
+                role="status"
+                className={cn(
+                  'w-full rounded-xl border p-3 text-center text-sm font-medium',
+                  modelError &&
+                    'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300',
+                  !modelError &&
+                    isVerified &&
+                    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300',
+                  !modelError &&
+                    !isVerified &&
+                    'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+                )}
+              >
+                <p
+                  className={cn(
+                    'text-[10px] font-medium uppercase tracking-widest',
+                    modelError && 'text-red-600 dark:text-red-400',
+                    !modelError && isVerified && 'text-emerald-600 dark:text-emerald-400',
+                    !modelError && !isVerified && 'text-amber-600 dark:text-amber-400',
+                  )}
+                >
+                  {isVerified ? 'Face Verified' : FRONT_CAPTURE_STEP.label}
+                </p>
+                <p className="mt-1 text-xs sm:text-sm">
+                  {modelError ||
+                    statusMessage ||
+                    (isVerified
+                      ? 'Face detected — tap capture when ready'
+                      : FRONT_CAPTURE_STEP.instruction)}
+                </p>
+              </div>
+            )}
 
             {!isComplete && (
               <LivenessIndicator

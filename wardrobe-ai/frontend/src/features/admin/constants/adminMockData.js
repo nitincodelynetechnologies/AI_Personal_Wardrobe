@@ -1,9 +1,9 @@
 export const ADMIN_NAV_ITEMS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'users', label: 'Users' },
-  { id: 'catalog', label: 'Catalog' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'inventory', label: 'Inventory' },
   { id: 'orders', label: 'Orders' },
-  { id: 'ai', label: 'AI Performance' },
+  { id: 'customers', label: 'Customers' },
+  { id: 'coupons', label: 'Coupons' },
 ];
 
 export const MONTHLY_REVENUE_DATA = [
@@ -59,6 +59,24 @@ export const ADMIN_KPI_GRAPH_DATA = {
     { name: 'Sat', value: 4.9 },
     { name: 'Sun', value: 5.0 },
   ],
+  tryons: [
+    { name: 'Mon', value: 420 },
+    { name: 'Tue', value: 510 },
+    { name: 'Wed', value: 680 },
+    { name: 'Thu', value: 590 },
+    { name: 'Fri', value: 720 },
+    { name: 'Sat', value: 890 },
+    { name: 'Sun', value: 810 },
+  ],
+  orders: [
+    { name: 'Mon', value: 28 },
+    { name: 'Tue', value: 34 },
+    { name: 'Wed', value: 41 },
+    { name: 'Thu', value: 38 },
+    { name: 'Fri', value: 52 },
+    { name: 'Sat', value: 61 },
+    { name: 'Sun', value: 47 },
+  ],
 };
 
 /** Maps StatCard ids to graphData keys */
@@ -111,7 +129,66 @@ export const ADMIN_KPI_CHART_CONFIG = {
     valueFormatter: (value) => `${Number(value).toFixed(1)}%`,
     yAxisFormatter: (value) => `${value}%`,
   },
+  tryons: {
+    title: 'AI Virtual Try-On Sessions',
+    subtitle: 'Daily IDM-VTON & 3D try-on runs · last 7 days',
+    stroke: '#e91e8c',
+    barFill: '#e91e8c',
+    ring: 'ring-magenta',
+    activeBorder: 'border-magenta',
+    valueFormatter: (value) => `${Number(value).toLocaleString('en-IN')} sessions`,
+    yAxisFormatter: (value) => String(value),
+  },
+  orders: {
+    title: 'Order Volume',
+    subtitle: 'Completed & pending orders · last 7 days',
+    stroke: '#06b6d4',
+    barFill: '#06b6d4',
+    ring: 'ring-cyan-500',
+    activeBorder: 'border-cyan-500',
+    valueFormatter: (value) => `${Number(value)} orders`,
+    yAxisFormatter: (value) => String(value),
+  },
 };
+
+export const ADMIN_DASHBOARD_KPIS = [
+  {
+    id: 'revenue',
+    metricKey: 'revenue',
+    label: 'Daily Revenue',
+    value: '₹1,38,400',
+    trend: '+12%',
+    trendUp: true,
+    caption: 'today vs yesterday',
+  },
+  {
+    id: 'users',
+    metricKey: 'users',
+    label: 'Active Users',
+    value: '8,432',
+    trend: '+5%',
+    trendUp: true,
+    caption: 'daily active',
+  },
+  {
+    id: 'ai-tryons',
+    metricKey: 'tryons',
+    label: 'AI Try-on Stats',
+    value: '247',
+    trend: '+18%',
+    trendUp: true,
+    caption: 'VTON sessions today',
+  },
+  {
+    id: 'total-orders',
+    metricKey: 'orders',
+    label: 'Total Orders',
+    value: '301',
+    trend: '+9%',
+    trendUp: true,
+    caption: 'last 7 days',
+  },
+];
 
 export const ADMIN_KPI_CARDS = [
   {
@@ -385,6 +462,7 @@ export const ADMIN_AI_METRICS = [
 ];
 
 export const ORDER_STATUS_STYLES = {
+  Pending: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
   Delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
   Processing: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
   Confirmed: 'bg-sky-500/10 text-sky-400 border-sky-500/30',
@@ -403,3 +481,17 @@ export function formatAdminDate(dateString) {
     year: 'numeric',
   });
 }
+
+export const MOCK_CRM_USERS = [
+  { id: 'u1', name: 'Priya Sharma', email: 'priya@email.com', segment: 'VIP', orders: 12, ltv: 48200 },
+  { id: 'u2', name: 'Arjun Mehta', email: 'arjun@email.com', segment: 'Regular', orders: 4, ltv: 15600 },
+  { id: 'u3', name: 'Sneha Reddy', email: 'sneha@email.com', segment: 'New', orders: 1, ltv: 3499 },
+  { id: 'u4', name: 'Rahul Kapoor', email: 'rahul@email.com', segment: 'At Risk', orders: 2, ltv: 11200 },
+  { id: 'u5', name: 'Ananya Iyer', email: 'ananya@email.com', segment: 'VIP', orders: 8, ltv: 36400 },
+];
+
+export const MOCK_ABANDONED_CARTS = [
+  { id: 'c1', user: 'Vikram Singh', items: 2, value: 7498, lastActive: '2h ago' },
+  { id: 'c2', user: 'Meera Patel', items: 1, value: 5999, lastActive: '5h ago' },
+  { id: 'c3', user: 'Guest #8821', items: 3, value: 9247, lastActive: '1d ago' },
+];

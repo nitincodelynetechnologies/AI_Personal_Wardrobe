@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useToastStore } from '@/components/ui/toaster';
 import { DashboardLayout } from '@/features/dashboard/components/DashboardLayout';
 import { getNetworkErrorMessage } from '@/features/auth/services/apiClient';
 import { getFashionDna } from '@/features/dashboard/services/dashboardService';
@@ -12,18 +13,21 @@ import { useOnboardingGuard } from '@/features/profile/hooks/useOnboardingGuard'
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
 import { useOutfits } from '@/features/outfits/hooks/useOutfits';
-import { useAuthUser } from '@/features/auth/hooks/useAuthUser';
 import { ClosetProfileHeader } from '@/features/closet/components/ClosetProfileHeader';
 import { ClosetTabs } from '@/features/closet/components/ClosetTabs';
-import { ClosetPolaroidCard } from '@/features/closet/components/ClosetPolaroidCard';
 import { ClosetVtonLookCard } from '@/features/closet/components/ClosetVtonLookCard';
 import { ClosetFashionDnaPanel } from '@/features/closet/components/ClosetFashionDnaPanel';
-import { useSavedLooks } from '@/features/closet/hooks/useSavedLooks';
+import {
+  PERSONAL_CLOSET_UPDATED_EVENT,
+  readPersonalCloset,
+  removeFromPersonalCloset,
+  VTON_PERSONAL_CLOSET_KEY,
+} from '@/features/closet/utils/personalClosetStorage';
 import { MOCK_FASHION_DNA } from '@/features/closet/constants/closetMockData';
 
 export function ClosetPage() {
   const { ready } = useOnboardingGuard();
-  const { userId } = useAuthUser();
+  const showToast = useToastStore((state) => state.showToast);
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const profile = useProfileStore((state) => state.profile);
@@ -34,12 +38,55 @@ export function ClosetPage() {
   const [activeTab, setActiveTab] = useState('dna');
   const [fashionDna, setLocalFashionDna] = useState(cachedFashionDna);
   const [dnaLoading, setDnaLoading] = useState(false);
+  const [closetItems, setClosetItems] = useState([]);
 
-  const savedLooks = useSavedLooks(userId);
+  const loadClosetItems = useCallback(() => {
+    setClosetItems(readPersonalCloset());
+  }, []);
+
+  useEffect(() => {
+    loadClosetItems();
+
+    const handleStorage = (event) => {
+      if (!event.key || event.key === VTON_PERSONAL_CLOSET_KEY) {
+        loadClosetItems();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorage);
+      window.addEventListener(PERSONAL_CLOSET_UPDATED_EVENT, loadClosetItems);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorage);
+        window.removeEventListener(PERSONAL_CLOSET_UPDATED_EVENT, loadClosetItems);
+      }
+    };
+  }, [loadClosetItems]);
+
+  const handleDeleteFromCloset = useCallback(
+    (itemId) => {
+      const removed = removeFromPersonalCloset(itemId);
+      if (!removed) {
+        showToast({
+          message: 'Could not remove this look. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setClosetItems(readPersonalCloset());
+      showToast({
+        message: 'Look removed from your Personal Closet.',
+        variant: 'default',
+      });
+    },
+    [showToast],
+  );
 
   const {
-    data: outfits = [],
-    isLoading: outfitsLoading,
     isError: outfitsError,
     error: outfitsErr,
   } = useOutfits();
@@ -72,14 +119,11 @@ export function ClosetPage() {
 
   const displayFashionDna = fashionDna || cachedFashionDna || MOCK_FASHION_DNA;
   const usingMockDna = !fashionDna && !cachedFashionDna;
-  const hasVtonLooks = savedLooks.length > 0;
-  const hasGeneratedOutfits = outfits.length > 0;
+  const hasClosetItems = closetItems.length > 0;
 
   if (!ready) return null;
 
-  const isLoading =
-    (activeTab === 'looks' && outfitsLoading && !hasVtonLooks && !hasGeneratedOutfits) ||
-    (activeTab === 'dna' && dnaLoading && !fashionDna && !cachedFashionDna);
+  const isLoading = activeTab === 'dna' && dnaLoading && !fashionDna && !cachedFashionDna;
 
   return (
     <DashboardLayout>
@@ -88,7 +132,7 @@ export function ClosetPage() {
           <ClosetProfileHeader
             user={user}
             profile={profile}
-            lookCount={savedLooks.length || outfits.length}
+            lookCount={closetItems.length}
           />
 
           <div className="mt-8">
@@ -126,7 +170,7 @@ export function ClosetPage() {
                           Saved Looks
                         </h2>
                         <p className="mt-1 text-sm text-slate-700 dark:text-gray-400">
-                          Virtual try-on fits and AI-generated outfits from your wardrobe.
+                          Outfits you save from Style Studio appear here instantly.
                         </p>
                       </div>
                       <Button
@@ -134,38 +178,31 @@ export function ClosetPage() {
                         variant="outline"
                         className="self-start border-borderColor bg-white text-slate-900 hover:border-magenta/30 hover:bg-slate-100 dark:bg-[#150d22] dark:text-white dark:hover:bg-[#1a1028]"
                       >
-                        <Link href="/outfits">Generate New Look</Link>
+                        <Link href="/outfits">Open Style Studio</Link>
                       </Button>
                     </div>
 
-                    {hasVtonLooks ? (
-                      <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {savedLooks.map((look) => (
-                          <ClosetVtonLookCard key={look.id} look={look} />
+                    {hasClosetItems ? (
+                      <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-3">
+                        {closetItems.map((look) => (
+                          <ClosetVtonLookCard
+                            key={look.id}
+                            look={look}
+                            onDelete={handleDeleteFromCloset}
+                          />
                         ))}
                       </div>
                     ) : (
-                      <div className="col-span-full py-12 text-center">
-                        <p className="text-sm text-slate-400">
-                          You haven&apos;t saved any customized AI looks yet.
+                      <div className="col-span-full rounded-2xl border border-dashed border-borderColor bg-slate-50/50 px-6 py-16 text-center dark:bg-[#150d22]/40">
+                        <p className="text-base font-medium text-slate-700 dark:text-slate-200">
+                          Your closet is empty. Style some outfits in the Studio to save them here!
                         </p>
-                      </div>
-                    )}
-
-                    {hasGeneratedOutfits && (
-                      <div className="space-y-4 border-t border-borderColor pt-8">
-                        <h3 className="font-playfair text-lg font-semibold text-slate-900 dark:text-white">
-                          AI Outfit Combos
-                        </h3>
-                        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                          {outfits.map((outfit, index) => (
-                            <ClosetPolaroidCard
-                              key={outfit.id}
-                              outfit={outfit}
-                              rotation={index % 2 === 0 ? -1.5 : 1.5}
-                            />
-                          ))}
-                        </div>
+                        <Button
+                          asChild
+                          className="mt-6 bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-500 hover:to-purple-500"
+                        >
+                          <Link href="/outfits">Go to Style Studio</Link>
+                        </Button>
                       </div>
                     )}
                   </section>

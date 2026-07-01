@@ -27,6 +27,8 @@ export function Providers({ children }) {
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     async function hydrateStores() {
       await Promise.all([
         useAuthStore.persist.rehydrate(),

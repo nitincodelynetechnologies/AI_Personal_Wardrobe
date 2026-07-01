@@ -60,25 +60,24 @@ export function AuthErrorFeedback({ error, onRetry, className }) {
         <h2 className="font-playfair text-xl font-semibold text-foreground sm:text-2xl">
           Verification Failed
         </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>
       </div>
 
       <Alert variant="destructive" className="text-left text-sm">
         {message}
       </Alert>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Button onClick={onRetry} size="lg" className="gap-2">
+      <div className="mt-4 flex w-full flex-col items-center justify-center gap-3">
+        <Button onClick={onRetry} size="lg" className="w-full max-w-xs gap-2">
           <RefreshCw className="h-4 w-4" />
           Try Again
         </Button>
-        <Button asChild variant="outline" size="lg" className="gap-2">
+        <Button asChild variant="outline" size="lg" className="w-full max-w-xs gap-2">
           <Link href="#email-login">
             <UserPlus className="h-4 w-4" />
             Use Email Login
           </Link>
         </Button>
-        <Button asChild variant="ghost" size="lg" className="gap-2 text-muted-foreground">
+        <Button asChild variant="ghost" size="lg" className="w-full max-w-xs gap-2 text-muted-foreground">
           <Link href="/register/face">
             Register Face
           </Link>

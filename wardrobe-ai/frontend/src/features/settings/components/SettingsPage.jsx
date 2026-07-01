@@ -12,6 +12,8 @@ import { DashboardLayout } from '@/features/dashboard/components/DashboardLayout
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { SettingsProfileForm } from '@/features/settings/components/SettingsProfileForm';
 import { SettingsPreferencesForm } from '@/features/settings/components/SettingsPreferencesForm';
+import { OrderHistoryPanel } from '@/features/settings/components/OrderHistoryPanel';
+import { SupportHelpPanel } from '@/features/settings/components/SupportHelpPanel';
 import {
   validateSettingsPreferences,
   validateSettingsProfile,
@@ -68,6 +70,16 @@ export function SettingsPage() {
   const [preferenceErrors, setPreferenceErrors] = useState({});
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (['profile', 'preferences', 'orders', 'support'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
 
   useEffect(() => {
     useAuthStore.persist.rehydrate();
@@ -236,10 +248,12 @@ export function SettingsPage() {
           </Alert>
         )}
 
-        <Tabs defaultValue="profile">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="flex h-auto flex-wrap gap-1">
             <TabsTrigger value="profile">My Profile</TabsTrigger>
             <TabsTrigger value="preferences">Style Preferences</TabsTrigger>
+            <TabsTrigger value="orders">Order History</TabsTrigger>
+            <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -300,6 +314,34 @@ export function SettingsPage() {
                     </Button>
                   </form>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <Card className="border-borderColor bg-white/30 dark:bg-[#150d22]/30">
+              <CardHeader>
+                <CardTitle className="font-playfair text-lg">Order History</CardTitle>
+                <CardDescription>
+                  Track purchases and download invoices. Status updates sync with our fulfillment team.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OrderHistoryPanel markReadOnMount={activeTab === 'orders'} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="support">
+            <Card className="border-borderColor bg-white/30 dark:bg-[#150d22]/30">
+              <CardHeader>
+                <CardTitle className="font-playfair text-lg">Support & Help</CardTitle>
+                <CardDescription>
+                  Raise a ticket for VTON, checkout, or account issues. Replies appear here and in notifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SupportHelpPanel />
               </CardContent>
             </Card>
           </TabsContent>

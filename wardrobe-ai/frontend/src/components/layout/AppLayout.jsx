@@ -18,9 +18,15 @@ import { CartDrawer } from '@/features/commerce/components/CartDrawer';
 import { CommerceNavActions } from '@/features/commerce/components/CommerceNavActions';
 import { WishlistDrawer } from '@/features/commerce/components/WishlistDrawer';
 import { StylistChatbot } from '@/features/stylist-chat/components/StylistChatbot';
+import { SupportHelpFab } from '@/features/support/components/SupportHelpFab';
+import { SupportChatWidget } from '@/features/support/components/SupportChatWidget';
+import { SupportNotificationBell } from '@/features/support/components/SupportNotificationBell';
+import { SupportNotificationToast } from '@/features/support/components/SupportNotificationToast';
+import { OrderHistoryModal } from '@/features/orders/components/OrderHistoryModal';
 import { useCartStore } from '@/features/commerce/store/useCartStore';
 import { useWishlistStore } from '@/features/commerce/store/useWishlistStore';
 import { useIsAdmin } from '@/features/auth/hooks/useIsAdmin';
+import { MemberRouteGuard } from '@/features/auth/components/MemberRouteGuard';
 
 function getMobileTitle(pathname) {
   const match = APP_NAV_ITEMS.find((item) => item.href && isNavItemActive(pathname, item));
@@ -174,10 +180,11 @@ export function AppLayout({ children }) {
   const drawerState = { cartOpen, wishlistOpen };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-slate-900 dark:bg-obsidian dark:text-white">
+    <MemberRouteGuard>
+    <div className="midnight-shell flex h-screen w-full overflow-hidden bg-background text-slate-900 dark:text-slate-200">
       <aside
         className={cn(
-          'relative z-40 hidden h-full shrink-0 flex-col border-r border-borderColor bg-background transition-all duration-300 ease-in-out dark:border-white/5 dark:bg-obsidian md:flex',
+          'relative z-40 hidden h-full shrink-0 flex-col border-r border-borderColor bg-background transition-all duration-300 ease-in-out dark:border-slate-700/50 dark:bg-slate-900/50 dark:backdrop-blur-xl md:flex',
           isCollapsed ? 'w-20' : 'w-64',
         )}
       >
@@ -210,7 +217,7 @@ export function AppLayout({ children }) {
                   <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.25em] text-magenta">
                     Style Studio
                   </p>
-                  <h2 className="whitespace-nowrap font-playfair text-base font-semibold text-slate-900 dark:text-white">
+                  <h2 className="whitespace-nowrap font-playfair text-base font-semibold text-slate-900 dark:text-slate-100">
                     AI Wardrobe
                   </h2>
                 </div>
@@ -280,23 +287,24 @@ export function AppLayout({ children }) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="z-40 flex shrink-0 items-center justify-between border-b border-borderColor bg-background/90 px-4 py-3 backdrop-blur-md md:hidden">
+        <header className="z-40 flex shrink-0 items-center justify-between border-b border-borderColor bg-background/90 px-4 py-3 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-900/70 md:hidden">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wider text-magenta">Wardrobe AI</p>
-            <p className="truncate font-playfair text-base font-semibold text-slate-900 dark:text-white">
+            <p className="truncate font-playfair text-base font-semibold text-slate-900 dark:text-slate-100">
               {getMobileTitle(pathname)}
             </p>
           </div>
           <div className="flex items-center gap-1">
             <CommerceNavActions />
             <ThemeToggle variant="header" />
+            <SupportNotificationBell />
             <ProfileMenu />
           </div>
         </header>
 
         <main
           className={cn(
-            'app-main min-h-0 flex-1 overflow-x-hidden bg-background text-slate-900 dark:bg-obsidian dark:text-white',
+            'app-main min-h-0 flex-1 overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-200',
             isCatalog
               ? 'flex flex-col overflow-hidden p-0'
               : 'scrollbar-hide overflow-y-auto px-4 py-6 sm:px-6 md:px-8 md:py-8',
@@ -305,6 +313,7 @@ export function AppLayout({ children }) {
           {!isDashboard && (
             <div className="mb-4 hidden items-center justify-end gap-2 md:flex">
               <ThemeToggle variant="header" />
+              <SupportNotificationBell />
               <ProfileMenu />
             </div>
           )}
@@ -316,6 +325,11 @@ export function AppLayout({ children }) {
       <CartDrawer />
       <WishlistDrawer />
       <StylistChatbot />
+      <SupportHelpFab />
+      <SupportChatWidget />
+      <OrderHistoryModal />
+      <SupportNotificationToast />
     </div>
+    </MemberRouteGuard>
   );
 }

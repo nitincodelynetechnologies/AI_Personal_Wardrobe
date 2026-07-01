@@ -19,6 +19,7 @@ if (Test-Path ".env") {
 }
 if (-not $env:VTON_MOCK) { $env:VTON_MOCK = "true" }
 if (-not $env:VTON_GPU_FALLBACK) { $env:VTON_GPU_FALLBACK = "true" }
+if (-not $env:VTON_PORT) { $env:VTON_PORT = "8010" }
 
-Write-Host "Starting VTON backend at http://127.0.0.1:8000 (VTON_MOCK=$env:VTON_MOCK, VTON_GPU_FALLBACK=$env:VTON_GPU_FALLBACK, HF_TOKEN=$(if ($env:HF_TOKEN) { 'set' } else { 'missing' }))"
-& $Py -m uvicorn main:app --host 127.0.0.1 --port 8000
+Write-Host "Starting VTON backend at http://127.0.0.1:$env:VTON_PORT (VTON_MOCK=$env:VTON_MOCK, VTON_GPU_FALLBACK=$env:VTON_GPU_FALLBACK, HF_TOKEN=$(if ($env:HF_TOKEN) { 'set' } else { 'missing' }))"
+& $Py -m uvicorn main:app --host 127.0.0.1 --port $env:VTON_PORT

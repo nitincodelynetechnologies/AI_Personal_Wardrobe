@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { generateOrderId } from '@/features/checkout/constants/checkoutOptions';
 
+import { saveCheckoutOrder } from '@/features/shared/storage/platformSyncStorage';
+
 const initialState = {
   orders: [],
   lastOrder: null,
@@ -16,13 +18,17 @@ export const useOrderStore = create(
         const orderId = generateOrderId();
         const order = {
           id: orderId,
-          status: 'Confirmed',
+          status: 'Pending',
           items: items.map((item) => ({ ...item })),
           paymentMethod,
           shipping,
           total,
           createdAt: new Date().toISOString(),
         };
+
+        if (typeof window !== 'undefined') {
+          saveCheckoutOrder(order);
+        }
 
         set({
           orders: [order, ...get().orders],

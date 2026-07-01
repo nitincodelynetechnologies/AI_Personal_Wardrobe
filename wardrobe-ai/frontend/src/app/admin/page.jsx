@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Admin Console | Wardrobe AI',
-  description: 'Business analytics, user statistics, and order monitoring.',
+  title: 'Admin Portal | Wardrobe AI',
+  description: 'E-Commerce & AI Analytics Dashboard — inventory, orders, CRM, and coupons.',
 };
 
 export { AdminPage as default } from '@/features/admin/components/AdminPage';
