@@ -1,4 +1,33 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+function inferRenderBackendApiUrl(hostname) {
+  if (!hostname.endsWith('.onrender.com')) {
+    return null;
+  }
+
+  // e.g. ai-personal-wardrobe-1.onrender.com -> ai-personal-wardrobe.onrender.com
+  const match = hostname.match(/^(.+?)(?:-\d+)\.onrender\.com$/);
+  if (!match) {
+    return null;
+  }
+
+  return `https://${match[1]}.onrender.com/api`;
+}
+
+export function getApiBaseUrl() {
+  const configured = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
+
+  if (configured.startsWith('http')) {
+    return configured.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const inferred = inferRenderBackendApiUrl(window.location.hostname);
+    if (inferred) {
+      return inferred;
+    }
+  }
+
+  return configured || '/api';
+}
 
 export const NETWORK_ERROR_MESSAGE =
   'Unable to connect to the server. Check your network and ensure the API is running.';
@@ -36,6 +65,7 @@ export function getNetworkErrorMessage(error) {
 
 export async function apiClient(endpoint, options = {}) {
   const { method = 'GET', body, headers = {}, token, timeoutMs } = options;
+  const apiBaseUrl = getApiBaseUrl();
 
   const requestHeaders = { ...headers };
 
@@ -57,7 +87,7 @@ export async function apiClient(endpoint, options = {}) {
   let response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(`${apiBaseUrl}${endpoint}`, {
       method,
       headers: requestHeaders,
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,

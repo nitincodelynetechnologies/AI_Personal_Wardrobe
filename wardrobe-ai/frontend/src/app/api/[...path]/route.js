@@ -32,11 +32,11 @@ async function proxyToBackend(request, context) {
 
   try {
     const upstream = await fetch(targetUrl, init);
+    const responseBody = await upstream.text();
     const responseHeaders = new Headers(upstream.headers);
     responseHeaders.delete('transfer-encoding');
     responseHeaders.delete('content-encoding');
-
-    const responseBody = await upstream.arrayBuffer();
+    responseHeaders.set('content-length', String(Buffer.byteLength(responseBody, 'utf8')));
 
     return new Response(responseBody, {
       status: upstream.status,
