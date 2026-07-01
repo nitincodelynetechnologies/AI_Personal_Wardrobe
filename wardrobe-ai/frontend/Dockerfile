@@ -14,8 +14,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG BACKEND_API_URL=http://backend:3001/api
+ARG BACKEND_API_URL=https://ai-personal-wardrobe.onrender.com/api
+ARG NEXT_PUBLIC_API_BASE_URL=https://ai-personal-wardrobe.onrender.com/api
 ENV BACKEND_API_URL=${BACKEND_API_URL}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DIST_DIR=.next
 
@@ -25,9 +27,11 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-ARG BACKEND_API_URL=http://backend:3001/api
+ARG BACKEND_API_URL=https://ai-personal-wardrobe.onrender.com/api
+ARG NEXT_PUBLIC_API_BASE_URL=https://ai-personal-wardrobe.onrender.com/api
 ENV NODE_ENV=production
 ENV BACKEND_API_URL=${BACKEND_API_URL}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
