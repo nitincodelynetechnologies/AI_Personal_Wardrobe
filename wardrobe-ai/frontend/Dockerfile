@@ -3,7 +3,9 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
+COPY scripts ./scripts
+RUN node scripts/copy-face-models.js
 
 FROM node:20-alpine AS builder
 
@@ -15,6 +17,7 @@ COPY . .
 ARG BACKEND_API_URL=http://backend:3001/api
 ENV BACKEND_API_URL=${BACKEND_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_DIST_DIR=.next
 
 RUN npm run build
 
