@@ -19,6 +19,18 @@ export default registerAs('database', () => {
 
   return {
     postgres: {
+      connectionString:
+        process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('${')
+          ? process.env.DATABASE_URL
+          : undefined,
+      ssl:
+        process.env.POSTGRES_SSL === 'true' ||
+        Boolean(
+          process.env.DATABASE_URL &&
+            /render\.com|neon\.tech|supabase\.co|rds\.amazonaws\.com/i.test(
+              process.env.DATABASE_URL,
+            ),
+        ),
       host: pgHost,
       port: parseInt(pgPort, 10),
       user: process.env.POSTGRES_USER || 'wardrobe_user',
@@ -31,6 +43,7 @@ export default registerAs('database', () => {
     },
     qdrant: {
       url: resolveEnvUrl(process.env.QDRANT_URL, `http://${qdrantHost}:${qdrantPort}`),
+      apiKey: process.env.QDRANT_API_KEY || undefined,
       collections: {
         [QDRANT_COLLECTION_KEYS.FACES]:
           process.env.QDRANT_COLLECTION_FACES ||

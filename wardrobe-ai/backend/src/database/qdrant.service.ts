@@ -29,10 +29,14 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     const url =
       this.configService.get<string>('database.qdrant.url') || 'http://localhost:6333';
+    const apiKey = this.configService.get<string>('database.qdrant.apiKey');
 
     for (let attempt = 1; attempt <= CONNECT_RETRIES; attempt += 1) {
       try {
-        this.client = new QdrantClient({ url });
+        this.client = new QdrantClient({
+          url,
+          ...(apiKey ? { apiKey } : {}),
+        });
         await this.client.getCollections();
         this.ready = true;
         await this.ensureRegisteredCollections();

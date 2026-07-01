@@ -34,20 +34,29 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 1; attempt <= CONNECT_RETRIES; attempt += 1) {
       try {
-        this.pool = new Pool({
-          host: pg.host,
-          port: pg.port,
-          user: pg.user,
-          password: pg.password,
-          database: pg.database,
-          max: pg.pool.max,
-          idleTimeoutMillis: pg.pool.idleTimeoutMs,
-        });
+        this.pool = pg.connectionString
+          ? new Pool({
+              connectionString: pg.connectionString,
+              ssl: pg.ssl ? { rejectUnauthorized: false } : undefined,
+              max: pg.pool.max,
+              idleTimeoutMillis: pg.pool.idleTimeoutMs,
+            })
+          : new Pool({
+              host: pg.host,
+              port: pg.port,
+              user: pg.user,
+              password: pg.password,
+              database: pg.database,
+              ssl: pg.ssl ? { rejectUnauthorized: false } : undefined,
+              max: pg.pool.max,
+              idleTimeoutMillis: pg.pool.idleTimeoutMs,
+            });
 
         const result = await this.pool.query('SELECT NOW() AS server_time');
-        this.logger.log(
-          `PostgreSQL connected — ${result.rows[0].server_time} (${pg.host}:${pg.port}/${pg.database})`,
-        );
+        const target = pg.connectionString
+          ? 'DATABASE_URL'
+          : `${pg.host}:${pg.port}/${pg.database}`;
+        this.logger.log(`PostgreSQL connected — ${result.rows[0].server_time} (${target})`);
 
         await applyPendingMigrations(this.pool, this.logger);
         await this.verifyRegisteredTables();
