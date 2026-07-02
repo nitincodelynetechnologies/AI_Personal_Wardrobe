@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class PublicUserDto {
   @ApiProperty({ format: 'uuid' })
@@ -12,6 +12,9 @@ export class PublicUserDto {
 
   @ApiProperty({ example: 'active' })
   status: string;
+
+  @ApiPropertyOptional({ example: 'admin' })
+  role?: string;
 
   @ApiProperty()
   created_at: Date;

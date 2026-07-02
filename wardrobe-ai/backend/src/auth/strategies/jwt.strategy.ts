@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PublicUser } from '../../users/interfaces/user.interface';
 import { UsersService } from '../../users/users.service';
+import { parseAdminEmailAllowlist, withAdminRole } from '../utils/admin-role.util';
 
 export interface JwtPayload {
   sub: string;
@@ -13,7 +14,7 @@ export interface JwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    configService: ConfigService,
+    private readonly configService: ConfigService,
     private readonly usersService: UsersService,
   ) {
     super({
@@ -34,6 +35,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account is not active');
     }
 
-    return user;
+    const allowlist = parseAdminEmailAllowlist(
+      this.configService.get<string>('auth.adminEmails'),
+    );
+
+    return withAdminRole(user, allowlist);
   }
 }

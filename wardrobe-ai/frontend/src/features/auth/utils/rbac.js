@@ -1,14 +1,19 @@
 const ADMIN_ROLES = new Set(['admin', 'ADMIN', 'superadmin']);
 
+/** Built-in admin emails — works without NEXT_PUBLIC rebuild on Render. */
+const DEFAULT_ADMIN_EMAILS = ['patel12@gmail.com', 'patel@gmail.com'];
+
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
 }
 
 function getAdminEmailAllowlist() {
-  return (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  const fromEnv = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+
+  return fromEnv.length ? fromEnv : DEFAULT_ADMIN_EMAILS;
 }
 
 /**

@@ -17,4 +17,5 @@ export default registerAs('auth', () => ({
     process.env.FACE_LOGIN_SIMILARITY_THRESHOLD || '0.55',
   ),
   bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+  adminEmails: process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || '',
 }));

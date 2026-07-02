@@ -36,6 +36,8 @@ services:
         generateValue: true
       - key: FACE_SERVICE_MOCK
         value: "true"
+      - key: ADMIN_EMAILS
+        value: patel12@gmail.com,patel@gmail.com
       - key: CLOTHING_SERVICE_MOCK
         value: "true"
       - key: CORS_ORIGINS

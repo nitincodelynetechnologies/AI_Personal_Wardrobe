@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { FaceRegisterDto } from './dto/face-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { FaceService } from './services/face.service';
+import { parseAdminEmailAllowlist, withAdminRole } from './utils/admin-role.util';
 
 export interface FaceImageFiles {
   front?: Express.Multer.File[];
@@ -95,13 +96,14 @@ export class AuthService {
     }
 
     const jwt_token = await this.signToken(user);
+    const authUser = this.attachAdminRole(user);
 
     this.logger.log(`Face registration completed for user ${user.id}`);
 
     return {
       success: true,
       message: 'Face registration completed successfully',
-      user,
+      user: authUser,
       jwt_token,
     };
   }
@@ -162,7 +164,7 @@ export class AuthService {
 
     this.logger.log(`Face login successful for user ${user.id} (score: ${topMatch.score})`);
 
-    return { success: true, jwt_token, user };
+    return { success: true, jwt_token, user: this.attachAdminRole(user) };
   }
 
   async loginWithPassword(
@@ -206,7 +208,7 @@ export class AuthService {
       success: true,
       message: 'Login successful',
       jwt_token,
-      user,
+      user: this.attachAdminRole(user),
     };
   }
 
@@ -243,6 +245,13 @@ export class AuthService {
 
     this.logger.error(`${context}: ${JSON.stringify(error)}`);
     console.error(`[AuthService] ${context}`, error);
+  }
+
+  private attachAdminRole(user: PublicUser): PublicUser {
+    const allowlist = parseAdminEmailAllowlist(
+      this.configService.get<string>('auth.adminEmails'),
+    );
+    return withAdminRole(user, allowlist);
   }
 
   private async signToken(user: PublicUser): Promise<string> {

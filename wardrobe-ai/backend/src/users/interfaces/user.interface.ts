@@ -16,6 +16,7 @@ export interface PublicUser {
   mobile: string | null;
   status: UserStatus;
   created_at: Date;
+  role?: string;
 }
 
 export interface CreateUserInput {
