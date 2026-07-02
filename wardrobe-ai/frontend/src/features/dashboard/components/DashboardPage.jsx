@@ -43,7 +43,7 @@ export function DashboardPage() {
 
   const [tryOnProduct, setTryOnProduct] = useState(null);
   const [tryOnOpen, setTryOnOpen] = useState(false);
-  const activeCoupon = useActiveCoupon();
+  const { activeCoupon } = useActiveCoupon();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

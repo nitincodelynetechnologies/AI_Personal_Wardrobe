@@ -16,6 +16,7 @@ import { ProductsModule } from './products/products.module';
 import { TryOnModule } from './try-on/try-on.module';
 import { VtonModule } from './vton/vton.module';
 import { ChatModule } from './chat/chat.module';
+import { CouponsModule } from './coupons/coupons.module';
 import { OrdersModule } from './orders/orders.module';
 import { HealthController } from './health/health.controller';
 
@@ -40,6 +41,7 @@ import { HealthController } from './health/health.controller';
     WardrobeModule,
     OutfitsModule,
     OrdersModule,
+    CouponsModule,
   ],
   controllers: [HealthController],
 })

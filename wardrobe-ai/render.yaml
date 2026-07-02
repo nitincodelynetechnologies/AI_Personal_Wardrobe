@@ -41,7 +41,9 @@ services:
       - key: CLOTHING_SERVICE_MOCK
         value: "true"
       - key: CORS_ORIGINS
-        sync: false
+        value: https://ai-personal-wardrobe-1.onrender.com,https://ai-personal-wardrobe.onrender.com
+      - key: CORS_ALLOW_ONRENDER
+        value: "true"
 
   - type: web
     name: wardrobe-web
@@ -57,9 +59,9 @@ services:
       - key: NEXT_DIST_DIR
         value: .next
       - key: NEXT_PUBLIC_API_BASE_URL
-        value: /api
+        value: https://ai-personal-wardrobe.onrender.com/api
       - key: BACKEND_API_URL
-        sync: false
+        value: https://ai-personal-wardrobe.onrender.com/api
 
 databases:
   - name: wardrobe-database

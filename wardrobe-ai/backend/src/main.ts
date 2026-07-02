@@ -14,15 +14,48 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api');
 
-  const corsOrigins = (process.env.CORS_ORIGINS ||
-    'http://localhost:3000,http://localhost:3002,http://localhost:3003,http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:3003')
+  const defaultCorsOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3002',
+    'http://localhost:3003',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3002',
+    'http://127.0.0.1:3003',
+    'https://ai-personal-wardrobe-1.onrender.com',
+    'https://ai-personal-wardrobe.onrender.com',
+  ];
+
+  const envCorsOrigins = (process.env.CORS_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const corsOrigins = [...new Set([...defaultCorsOrigins, ...envCorsOrigins])];
+  const allowOnrenderWildcard = process.env.CORS_ALLOW_ONRENDER !== 'false';
+
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowOnrenderWildcard && origin.endsWith('.onrender.com')) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    maxAge: 86_400,
   });
   app.useGlobalPipes(
     new ValidationPipe({

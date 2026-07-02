@@ -1,6 +1,7 @@
 import { apiClient } from '@/features/auth/services/apiClient';
+import { asJpegBlob, compressFaceImage } from '@/features/auth/utils/compressFaceImage';
 
-const FACE_LOGIN_TIMEOUT_MS = 10000;
+const FACE_LOGIN_TIMEOUT_MS = 15000;
 
 /**
  * Authenticates the user via face biometrics.
@@ -9,10 +10,7 @@ const FACE_LOGIN_TIMEOUT_MS = 10000;
  * @returns {Promise<{ success: boolean, jwt_token: string, user: object }>}
  */
 export async function faceLogin(faceBlob) {
-  const imageBlob =
-    faceBlob.type === 'image/jpeg' || faceBlob.type === 'image/png' || faceBlob.type === 'image/webp'
-      ? faceBlob
-      : new Blob([faceBlob], { type: 'image/jpeg' });
+  const imageBlob = asJpegBlob(await compressFaceImage(faceBlob));
 
   const formData = new FormData();
   formData.append('face', imageBlob, 'face.jpg');

@@ -14,6 +14,8 @@ import { PublicUser } from '../users/interfaces/user.interface';
 import { AdminGuard } from '../admin/admin.guard';
 import { CreateOrderDto, UpdateOrderStatusDto } from '../orders/dto/create-order.dto';
 import { OrdersService } from '../orders/orders.service';
+import { CouponsService } from '../coupons/coupons.service';
+import { CreateCouponDto, UpdateCouponStatusDto } from '../coupons/dto/coupon.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -38,7 +40,10 @@ export class OrdersController {
 @ApiBearerAuth()
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly couponsService: CouponsService,
+  ) {}
 
   @Get('orders')
   @UseGuards(JwtAuthGuard, AdminGuard)
@@ -72,5 +77,35 @@ export class AdminController {
       orders,
       registeredUsers,
     };
+  }
+
+  @Get('coupons')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'List all coupons (admin only)' })
+  async listCoupons() {
+    const coupons = await this.couponsService.listCoupons();
+    return { coupons };
+  }
+
+  @Post('coupons')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Create a coupon (admin only)' })
+  async createCoupon(@Body() dto: CreateCouponDto) {
+    const coupon = await this.couponsService.createCoupon(dto);
+    return { success: true, coupon };
+  }
+
+  @Patch('coupons/:id/status')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Activate or deactivate a coupon (admin only)' })
+  async updateCouponStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateCouponStatusDto,
+  ) {
+    const coupon = await this.couponsService.setCouponStatus(
+      parseInt(id, 10),
+      dto.status,
+    );
+    return { success: true, coupon };
   }
 }

@@ -8,8 +8,8 @@ import { OrderInvoiceModal } from '@/features/admin/components/OrderInvoiceModal
 import { ORDER_PIPELINE } from '@/features/admin/storage/adminCrmStorage';
 import { useAdminOrders } from '@/features/admin/hooks/useAdminOrders';
 import { updateAdminOrderStatus } from '@/features/admin/services/adminService';
+import { getSessionToken } from '@/features/auth/utils/sessionToken';
 import { updateOrderStatus } from '@/features/admin/storage/adminStorage';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 function OrderCard({ order, onStatusChange, onGenerateBill }) {
   return (
@@ -51,8 +51,7 @@ function OrderCard({ order, onStatusChange, onGenerateBill }) {
 }
 
 export function AdminOrdersManager() {
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const { orders, refresh, dataSource } = useAdminOrders();
+  const { orders, refresh, dataSource, error } = useAdminOrders();
   const [view, setView] = useState('kanban');
   const [invoiceOrder, setInvoiceOrder] = useState(null);
 
@@ -64,9 +63,11 @@ export function AdminOrdersManager() {
   }, [orders]);
 
   const handleStatusChange = async (orderId, status) => {
-    if (accessToken) {
+    const token = getSessionToken();
+
+    if (token) {
       try {
-        await updateAdminOrderStatus(orderId, status, accessToken);
+        await updateAdminOrderStatus(orderId, status, token);
       } catch {
         updateOrderStatus(orderId, status);
       }
@@ -95,7 +96,8 @@ export function AdminOrdersManager() {
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               Pipeline: Pending → Processing → Shipped → Delivered · Cancelled
-              {dataSource === 'api' ? ' · Live from database' : ' · Local cache'}
+              {dataSource === 'api' ? ' · Live from database (all users)' : ''}
+              {error ? ` · Error: ${error}` : ''}
             </p>
           </div>
           <div className="flex rounded-full border border-borderColor p-1 dark:border-white/10">

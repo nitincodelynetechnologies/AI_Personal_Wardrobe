@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { generateOrderId } from '@/features/checkout/constants/checkoutOptions';
-import { createOrderOnServer } from '@/features/admin/services/adminService';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { createOrderOnServer } from '@/features/orders/services/orderApiService';
 import { saveCheckoutOrder } from '@/features/shared/storage/platformSyncStorage';
 
 const initialState = {
@@ -27,37 +26,26 @@ export const useOrderStore = create(
           createdAt: new Date().toISOString(),
         };
 
-        const token = useAuthStore.getState().accessToken;
+        const response = await createOrderOnServer({
+          id: orderId,
+          items: order.items.map((item) => ({
+            name: item.name,
+            brand: item.brand,
+            price: item.price,
+            quantity: item.quantity,
+            productId: item.id != null ? String(item.id) : undefined,
+          })),
+          paymentMethod,
+          shipping,
+          total,
+        });
 
-        if (token) {
-          try {
-            const response = await createOrderOnServer(
-              {
-                id: orderId,
-                items: order.items.map((item) => ({
-                  name: item.name,
-                  brand: item.brand,
-                  price: item.price,
-                  quantity: item.quantity,
-                  productId: item.id != null ? String(item.id) : undefined,
-                })),
-                paymentMethod,
-                shipping,
-                total,
-              },
-              token,
-            );
-
-            if (response?.order) {
-              Object.assign(order, {
-                id: response.order.id ?? orderId,
-                status: response.order.status ?? order.status,
-                createdAt: response.order.createdAt ?? order.createdAt,
-              });
-            }
-          } catch (error) {
-            console.error('Failed to persist order to API — saving locally only', error);
-          }
+        if (response?.order) {
+          Object.assign(order, {
+            id: response.order.id ?? orderId,
+            status: response.order.status ?? order.status,
+            createdAt: response.order.createdAt ?? order.createdAt,
+          });
         }
 
         if (typeof window !== 'undefined') {

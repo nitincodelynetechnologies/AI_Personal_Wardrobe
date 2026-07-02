@@ -1,5 +1,8 @@
-/** Same-origin proxy via Next.js rewrite → Python vton-backend (see next.config.js) */
-const VTON_API_BASE = process.env.NEXT_PUBLIC_VTON_API_URL || '/vton-api';
+import { resolveVtonApiBaseUrl } from '@/features/auth/utils/resolveApiBaseUrl';
+
+function getVtonApiBase() {
+  return resolveVtonApiBaseUrl();
+}
 
 const VTON_TIMEOUT_MS = 300000;
 
@@ -11,7 +14,7 @@ function isGpuCapacityError(message) {
 
 export async function fetchVtonHealth() {
   try {
-    const response = await fetch(`${VTON_API_BASE}/health`, { cache: 'no-store' });
+    const response = await fetch(`${getVtonApiBase()}/health`, { cache: 'no-store' });
     if (!response.ok) return null;
     const data = await response.json();
     return data?.service === 'idm-vton' ? data : null;
@@ -81,7 +84,7 @@ export async function requestIdmVton({ userImageSource, garmentImageSource, garm
   const timeoutId = setTimeout(() => controller.abort(), VTON_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${VTON_API_BASE}/api/try-on`, {
+    const response = await fetch(`${getVtonApiBase()}/api/try-on`, {
       method: 'POST',
       body: formData,
       signal: controller.signal,

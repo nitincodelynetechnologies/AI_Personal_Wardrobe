@@ -13,7 +13,8 @@ function getAdminEmailAllowlist() {
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 
-  return fromEnv.length ? fromEnv : DEFAULT_ADMIN_EMAILS;
+  const merged = new Set([...DEFAULT_ADMIN_EMAILS, ...fromEnv]);
+  return [...merged];
 }
 
 /**

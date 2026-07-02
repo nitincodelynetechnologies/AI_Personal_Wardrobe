@@ -1,17 +1,14 @@
 import { getApiBaseUrl, ApiError } from '@/features/auth/services/apiClient';
 import { getSessionToken } from '@/features/auth/utils/sessionToken';
 
-async function adminFetch(endpoint, options = {}) {
-  const { method = 'GET', body, token } = options;
-  const accessToken = token ?? getSessionToken();
+async function couponsFetch(endpoint, options = {}) {
+  const { method = 'GET', body, token, auth = false } = options;
+  const accessToken = auth ? (token ?? getSessionToken()) : token;
 
-  if (!accessToken) {
-    throw new ApiError('Admin session token missing. Log in again.', 401, null);
+  const headers = {};
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
-
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-  };
   if (body) {
     headers['Content-Type'] = 'application/json';
   }
@@ -31,7 +28,7 @@ async function adminFetch(endpoint, options = {}) {
     try {
       data = raw ? JSON.parse(raw) : null;
     } catch {
-      throw new ApiError('Admin API returned invalid JSON', response.status, raw?.slice(0, 200));
+      throw new ApiError('Invalid coupon API response', response.status, raw?.slice(0, 200));
     }
   } else {
     data = await response.text();
@@ -43,26 +40,36 @@ async function adminFetch(endpoint, options = {}) {
         ? Array.isArray(data.message)
           ? data.message.join(', ')
           : data.message
-        : `Admin request failed (${response.status})`;
+        : `Coupon request failed (${response.status})`;
     throw new ApiError(message, response.status, data);
   }
 
   return data;
 }
 
-/** Fetches ALL platform orders (not user-scoped). Requires admin JWT. */
-export function fetchAdminStats(token) {
-  return adminFetch('/admin/stats', { token });
+/** Public — active offer for all users (no auth). */
+export function fetchActiveCoupon() {
+  return couponsFetch('/coupons/active');
 }
 
-export function fetchAdminOrders(token) {
-  return adminFetch('/admin/orders', { token });
+export function fetchAdminCoupons(token) {
+  return couponsFetch('/admin/coupons', { token, auth: true });
 }
 
-export function updateAdminOrderStatus(orderId, status, token) {
-  return adminFetch(`/admin/orders/${orderId}/status`, {
+export function createAdminCoupon(payload, token) {
+  return couponsFetch('/admin/coupons', {
+    method: 'POST',
+    body: payload,
+    token,
+    auth: true,
+  });
+}
+
+export function updateAdminCouponStatus(couponId, status, token) {
+  return couponsFetch(`/admin/coupons/${couponId}/status`, {
     method: 'PATCH',
     body: { status },
     token,
+    auth: true,
   });
 }

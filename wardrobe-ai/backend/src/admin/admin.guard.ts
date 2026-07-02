@@ -4,15 +4,22 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PublicUser } from '../users/interfaces/user.interface';
+import { isAdminEmail, parseAdminEmailAllowlist } from '../auth/utils/admin-role.util';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
+  constructor(private readonly configService: ConfigService) {}
+
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<{ user?: PublicUser }>();
-    const role = request.user?.role;
+    const user = request.user;
+    const allowlist = parseAdminEmailAllowlist(
+      this.configService.get<string>('auth.adminEmails'),
+    );
 
-    if (role === 'admin') {
+    if (user?.role === 'admin' || isAdminEmail(user?.email, allowlist)) {
       return true;
     }
 

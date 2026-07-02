@@ -248,7 +248,7 @@ function TrendingItemDetailModal({ item, onClose }) {
 export function AdminDashboard() {
   const { kpis, graphData, monthlyRevenueData, categorySalesData, revenueVsTargetData } =
     useAdminDashboardMetrics();
-  const activeCoupon = useActiveCoupon();
+  const { activeCoupon } = useActiveCoupon();
   const [activeMetric, setActiveMetric] = useState(null);
   const [selectedData, setSelectedData] = useState(null);
   const [selectedTrendingItem, setSelectedTrendingItem] = useState(null);

@@ -1,32 +1,9 @@
-function inferRenderBackendApiUrl(hostname) {
-  if (!hostname.endsWith('.onrender.com')) {
-    return null;
-  }
+import { resolveApiBaseUrl } from '@/features/auth/utils/resolveApiBaseUrl';
 
-  // e.g. ai-personal-wardrobe-1.onrender.com -> ai-personal-wardrobe.onrender.com
-  const match = hostname.match(/^(.+?)(?:-\d+)\.onrender\.com$/);
-  if (!match) {
-    return null;
-  }
-
-  return `https://${match[1]}.onrender.com/api`;
-}
+export { inferRenderBackendApiUrl } from '@/features/auth/utils/resolveApiBaseUrl';
 
 export function getApiBaseUrl() {
-  const configured = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
-
-  if (configured.startsWith('http')) {
-    return configured.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    const inferred = inferRenderBackendApiUrl(window.location.hostname);
-    if (inferred) {
-      return inferred;
-    }
-  }
-
-  return configured || '/api';
+  return resolveApiBaseUrl();
 }
 
 export const NETWORK_ERROR_MESSAGE =

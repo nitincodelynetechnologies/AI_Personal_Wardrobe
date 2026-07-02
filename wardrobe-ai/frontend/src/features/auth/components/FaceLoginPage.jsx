@@ -281,7 +281,11 @@ export function FaceLoginPage() {
 
                 {showError && activeError && (
                   <div className="border-t border-borderColor bg-white dark:bg-[#150d22] p-4">
-                    <AuthErrorFeedback error={activeError} onRetry={handleRetry} />
+                    <AuthErrorFeedback
+                      error={activeError}
+                      onRetry={handleRetry}
+                      onUseEmail={handleCloseFaceLogin}
+                    />
                   </div>
                 )}
               </div>

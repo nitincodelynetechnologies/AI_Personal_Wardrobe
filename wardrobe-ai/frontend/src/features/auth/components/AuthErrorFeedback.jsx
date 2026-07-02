@@ -40,7 +40,7 @@ export function getFaceLoginErrorMessage(error) {
   return error.message || ERROR_MESSAGES.default;
 }
 
-export function AuthErrorFeedback({ error, onRetry, className }) {
+export function AuthErrorFeedback({ error, onRetry, onUseEmail, className }) {
   const message = getFaceLoginErrorMessage(error);
 
   return (
@@ -71,11 +71,15 @@ export function AuthErrorFeedback({ error, onRetry, className }) {
           <RefreshCw className="h-4 w-4" />
           Try Again
         </Button>
-        <Button asChild variant="outline" size="lg" className="w-full max-w-xs gap-2">
-          <Link href="#email-login">
-            <UserPlus className="h-4 w-4" />
-            Use Email Login
-          </Link>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="w-full max-w-xs gap-2"
+          onClick={onUseEmail}
+        >
+          <UserPlus className="h-4 w-4" />
+          Use Email Login
         </Button>
         <Button asChild variant="ghost" size="lg" className="w-full max-w-xs gap-2 text-muted-foreground">
           <Link href="/register/face">

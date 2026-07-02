@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useAdminGuard } from '@/features/auth/hooks/useAdminGuard';
 import { AdminLayout } from '@/features/admin/components/AdminLayout';
 import { AdminDashboard } from '@/features/admin/components/AdminDashboard';
@@ -14,7 +15,11 @@ export function AdminPage() {
   const [activeSection, setActiveSection] = useState('dashboard');
 
   if (!ready) {
-    return null;
+    return (
+      <div className="admin-console midnight-shell flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-magenta" aria-label="Loading admin console" />
+      </div>
+    );
   }
 
   function renderSection(section) {

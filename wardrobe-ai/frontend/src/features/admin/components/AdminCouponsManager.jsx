@@ -5,22 +5,47 @@ import { Plus, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input, Label } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useToastStore } from '@/components/ui/toaster';
+import { ADMIN_COUPONS_UPDATED } from '@/features/admin/storage/adminStorage';
 import {
-  ADMIN_COUPONS_UPDATED,
-  readCoupons,
-  toggleCouponStatus,
-  writeCoupons,
-} from '@/features/admin/storage/adminStorage';
+  createAdminCoupon,
+  fetchAdminCoupons,
+  updateAdminCouponStatus,
+} from '@/features/commerce/services/couponsApiService';
+import { getSessionToken } from '@/features/auth/utils/sessionToken';
+
+function dispatchCouponsUpdated() {
+  window.dispatchEvent(new CustomEvent(ADMIN_COUPONS_UPDATED));
+}
 
 export function AdminCouponsManager() {
+  const showToast = useToastStore((state) => state.showToast);
   const [coupons, setCoupons] = useState([]);
   const [code, setCode] = useState('');
   const [discount, setDiscount] = useState('');
   const [type, setType] = useState('percent');
+  const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    setCoupons(readCoupons());
-  }, []);
+  const refresh = useCallback(async () => {
+    const token = getSessionToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await fetchAdminCoupons(token);
+      setCoupons(data.coupons ?? []);
+    } catch (error) {
+      console.error('[AdminCouponsManager] Failed to load coupons:', error);
+      showToast({
+        message: 'Could not load coupons from server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     refresh();
@@ -28,30 +53,55 @@ export function AdminCouponsManager() {
     return () => window.removeEventListener(ADMIN_COUPONS_UPDATED, refresh);
   }, [refresh]);
 
-  const handleCreate = (event) => {
+  const handleCreate = async (event) => {
     event.preventDefault();
     if (!code.trim() || !discount) return;
 
-    const next = [
-      ...coupons,
-      {
-        id: Date.now(),
-        code: code.trim().toUpperCase(),
-        discount: Number(discount),
-        type,
-        status: 'inactive',
-        uses: 0,
-      },
-    ];
-    writeCoupons(next);
-    setCode('');
-    setDiscount('');
-    refresh();
+    const token = getSessionToken();
+    if (!token) return;
+
+    try {
+      await createAdminCoupon(
+        {
+          code: code.trim().toUpperCase(),
+          discount: Number(discount),
+          type,
+        },
+        token,
+      );
+      setCode('');
+      setDiscount('');
+      await refresh();
+      dispatchCouponsUpdated();
+      showToast({ message: 'Coupon created.', variant: 'success' });
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : 'Failed to create coupon',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const toggleCoupon = (id) => {
-    toggleCouponStatus(id);
-    refresh();
+  const toggleCoupon = async (id, currentStatus) => {
+    const token = getSessionToken();
+    if (!token) return;
+
+    const nextStatus = currentStatus === 'active' ? 'inactive' : 'active';
+
+    try {
+      await updateAdminCouponStatus(id, nextStatus, token);
+      await refresh();
+      dispatchCouponsUpdated();
+      showToast({
+        message: nextStatus === 'active' ? 'Coupon activated globally.' : 'Coupon deactivated.',
+        variant: 'success',
+      });
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : 'Failed to update coupon',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -62,7 +112,7 @@ export function AdminCouponsManager() {
           Coupon & Discount Manager
         </h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Saved to <code className="text-pink-400">vton_coupons</code> in localStorage.
+          Offers sync to all users in real-time via the database (polled every 8s).
         </p>
       </div>
 
@@ -111,50 +161,54 @@ export function AdminCouponsManager() {
         </div>
       </form>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {coupons.map((coupon) => {
-          const isActive = coupon.status === 'active';
+      {loading ? (
+        <p className="text-sm text-slate-500">Loading coupons…</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {coupons.map((coupon) => {
+            const isActive = coupon.status === 'active';
 
-          return (
-          <article
-            key={coupon.id}
-            className={cn(
-              'rounded-2xl border p-5 shadow-lg backdrop-blur-md transition-all',
-              isActive
-                ? 'border-magenta/30 bg-magenta/5 dark:bg-magenta/10'
-                : 'border-borderColor bg-white/40 opacity-75 dark:border-white/10 dark:bg-[#150d22]/60',
-            )}
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-magenta" />
-                <span className="font-mono text-lg font-bold text-slate-900 dark:text-white">
-                  {coupon.code}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggleCoupon(coupon.id)}
-                className="text-magenta"
-                aria-label={isActive ? 'Deactivate coupon' : 'Activate coupon'}
-              >
-                {isActive ? (
-                  <ToggleRight className="h-7 w-7" />
-                ) : (
-                  <ToggleLeft className="h-7 w-7 text-slate-500" />
+            return (
+              <article
+                key={coupon.id}
+                className={cn(
+                  'rounded-2xl border p-5 shadow-lg backdrop-blur-md transition-all',
+                  isActive
+                    ? 'border-magenta/30 bg-magenta/5 dark:bg-magenta/10'
+                    : 'border-borderColor bg-white/40 opacity-75 dark:border-white/10 dark:bg-[#150d22]/60',
                 )}
-              </button>
-            </div>
-            <p className="text-2xl font-semibold text-slate-900 dark:text-white">
-              {coupon.type === 'percent' ? `${coupon.discount}% OFF` : `₹${coupon.discount} OFF`}
-            </p>
-            <p className="mt-2 text-xs text-slate-500">
-              {isActive ? 'Active' : 'Inactive'} · {coupon.uses} uses
-            </p>
-          </article>
-          );
-        })}
-      </div>
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-magenta" />
+                    <span className="font-mono text-lg font-bold text-slate-900 dark:text-white">
+                      {coupon.code}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleCoupon(coupon.id, coupon.status)}
+                    className="text-magenta"
+                    aria-label={isActive ? 'Deactivate coupon' : 'Activate coupon'}
+                  >
+                    {isActive ? (
+                      <ToggleRight className="h-7 w-7" />
+                    ) : (
+                      <ToggleLeft className="h-7 w-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-2xl font-semibold text-slate-900 dark:text-white">
+                  {coupon.type === 'percent' ? `${coupon.discount}% OFF` : `₹${coupon.discount} OFF`}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {isActive ? 'Active' : 'Inactive'} · {coupon.uses} uses
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

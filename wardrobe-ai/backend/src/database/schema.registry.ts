@@ -7,6 +7,7 @@ export const POSTGRES_TABLES = {
   OUTFITS: 'wardrobe.outfits',
   PRODUCTS: 'wardrobe.products',
   ORDERS: 'wardrobe.orders',
+  COUPONS: 'wardrobe.coupons',
   SCHEMA_MIGRATIONS: 'wardrobe.schema_migrations',
 } as const;
 
@@ -22,7 +23,7 @@ export const POSTGRES_PHASE4_TABLES = [POSTGRES_TABLES.OUTFITS] as const;
 
 export const POSTGRES_PHASE5_TABLES = [POSTGRES_TABLES.PRODUCTS] as const;
 
-export const POSTGRES_PHASE6_TABLES = [POSTGRES_TABLES.ORDERS] as const;
+export const POSTGRES_PHASE6_TABLES = [POSTGRES_TABLES.ORDERS, POSTGRES_TABLES.COUPONS] as const;
 
 export const QDRANT_COLLECTION_KEYS = {
   FACES: 'faces',
