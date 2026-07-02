@@ -17,10 +17,10 @@ import {
   updateTicketReply,
 } from '@/features/admin/storage/adminCrmStorage';
 import { aggregateCustomersFromOrders } from '@/features/admin/utils/adminCustomerAnalytics';
+import { useAdminOrders } from '@/features/admin/hooks/useAdminOrders';
 import {
   deriveTicketMessages,
   ORDERS_UPDATED,
-  readOrdersRaw,
 } from '@/features/shared/storage/platformSyncStorage';
 
 const TICKETS_STORAGE_KEY = 'vton_tickets';
@@ -323,13 +323,14 @@ function SupportTicketsMasterDetail({ tickets, onReply, onMarkRead }) {
 
 export function AdminCustomersPanel() {
   const showToast = useToastStore((state) => state.showToast);
+  const { orders, refresh: refreshOrders } = useAdminOrders();
   const [users, setUsers] = useState([]);
   const [tickets, setTickets] = useState([]);
 
   const refresh = useCallback(() => {
-    setUsers(aggregateCustomersFromOrders(readOrdersRaw()));
+    setUsers(aggregateCustomersFromOrders(orders));
     setTickets(readSupportTickets());
-  }, []);
+  }, [orders]);
 
   const vipCount = useMemo(
     () => users.filter((user) => user.segment === 'VIP').length,
@@ -416,7 +417,7 @@ export function AdminCustomersPanel() {
           User & Customer Management
         </h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Registered users, purchase history, abandoned carts, and support tickets — persisted in localStorage.
+          Registered users, purchase history, abandoned carts, and support tickets — orders load live from the database.
         </p>
       </div>
 

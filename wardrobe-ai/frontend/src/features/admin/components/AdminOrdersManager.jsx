@@ -1,16 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FileText, Package, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatAdminCurrency, ORDER_STATUS_STYLES } from '@/features/admin/constants/adminMockData';
 import { OrderInvoiceModal } from '@/features/admin/components/OrderInvoiceModal';
 import { ORDER_PIPELINE } from '@/features/admin/storage/adminCrmStorage';
-import {
-  ADMIN_ORDERS_UPDATED,
-  readMockOrders,
-  updateOrderStatus,
-} from '@/features/admin/storage/adminStorage';
+import { useAdminOrders } from '@/features/admin/hooks/useAdminOrders';
+import { updateAdminOrderStatus } from '@/features/admin/services/adminService';
+import { updateOrderStatus } from '@/features/admin/storage/adminStorage';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 function OrderCard({ order, onStatusChange, onGenerateBill }) {
   return (
@@ -52,19 +51,10 @@ function OrderCard({ order, onStatusChange, onGenerateBill }) {
 }
 
 export function AdminOrdersManager() {
-  const [orders, setOrders] = useState([]);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const { orders, refresh, dataSource } = useAdminOrders();
   const [view, setView] = useState('kanban');
   const [invoiceOrder, setInvoiceOrder] = useState(null);
-
-  const refresh = useCallback(() => {
-    setOrders(readMockOrders());
-  }, []);
-
-  useEffect(() => {
-    refresh();
-    window.addEventListener(ADMIN_ORDERS_UPDATED, refresh);
-    return () => window.removeEventListener(ADMIN_ORDERS_UPDATED, refresh);
-  }, [refresh]);
 
   const grouped = useMemo(() => {
     return ORDER_PIPELINE.reduce((acc, status) => {
@@ -73,8 +63,16 @@ export function AdminOrdersManager() {
     }, {});
   }, [orders]);
 
-  const handleStatusChange = (orderId, status) => {
-    updateOrderStatus(orderId, status);
+  const handleStatusChange = async (orderId, status) => {
+    if (accessToken) {
+      try {
+        await updateAdminOrderStatus(orderId, status, accessToken);
+      } catch {
+        updateOrderStatus(orderId, status);
+      }
+    } else {
+      updateOrderStatus(orderId, status);
+    }
     refresh();
   };
 
@@ -97,6 +95,7 @@ export function AdminOrdersManager() {
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               Pipeline: Pending → Processing → Shipped → Delivered · Cancelled
+              {dataSource === 'api' ? ' · Live from database' : ' · Local cache'}
             </p>
           </div>
           <div className="flex rounded-full border border-borderColor p-1 dark:border-white/10">

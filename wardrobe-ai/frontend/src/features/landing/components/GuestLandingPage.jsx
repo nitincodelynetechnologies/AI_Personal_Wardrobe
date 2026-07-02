@@ -24,6 +24,8 @@ import {
   LANDING_FEATURE_GRID,
 } from '@/features/landing/constants/guestLandingData';
 import { buildCatalogSearchPath } from '@/features/catalog/services/catalogService';
+import { LandingPricingSection } from '@/features/landing/components/LandingPricingSection';
+import { LandingSiteFooter } from '@/features/landing/components/LandingSiteFooter';
 
 const SLIDE_INTERVAL_MS = 5500;
 
@@ -342,11 +344,8 @@ export function GuestLandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-borderColor px-6 py-8 text-center dark:border-slate-700/50">
-        <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
-          © AI Wardrobe · Sign in to access the full experience
-        </p>
-      </footer>
+      <LandingPricingSection />
+      <LandingSiteFooter />
     </div>
   );
 }

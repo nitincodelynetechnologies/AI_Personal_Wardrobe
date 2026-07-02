@@ -6,11 +6,8 @@ import { POSTGRES_TABLES } from './schema.registry';
 
 export function resolveMigrationsDir(): string {
   const candidates = [
-    // Copied during `npm run build` (Render Node + Docker)
     join(__dirname, '..', '..', 'database', 'postgres', 'migrations'),
-    // Local dev from backend/dist
     join(__dirname, '..', '..', '..', 'database', 'postgres', 'migrations'),
-    // Render / monorepo cwd variants
     join(process.cwd(), 'database', 'postgres', 'migrations'),
     join(process.cwd(), '..', 'database', 'postgres', 'migrations'),
   ];
@@ -32,6 +29,11 @@ export async function ensureWardrobeSchema(
     'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"',
     'CREATE EXTENSION IF NOT EXISTS "pgcrypto"',
     'CREATE SCHEMA IF NOT EXISTS wardrobe',
+    `CREATE TABLE IF NOT EXISTS wardrobe.schema_migrations (
+      id SERIAL PRIMARY KEY,
+      version VARCHAR(255) NOT NULL UNIQUE,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
   ];
 
   for (const sql of statements) {
@@ -39,7 +41,7 @@ export async function ensureWardrobeSchema(
       await pool.query(sql);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.warn(`Bootstrap SQL skipped (${sql}): ${message}`);
+      logger.warn(`Bootstrap SQL skipped (${sql.slice(0, 60)}…): ${message}`);
     }
   }
 }
@@ -52,15 +54,22 @@ export async function usersTableExists(pool: Pool): Promise<boolean> {
   return Boolean(result.rows[0]?.reg);
 }
 
+async function getAppliedMigrationVersions(pool: Pool): Promise<Set<string>> {
+  try {
+    const result = await pool.query<{ version: string }>(
+      'SELECT version FROM wardrobe.schema_migrations',
+    );
+    return new Set(result.rows.map((row) => row.version));
+  } catch {
+    return new Set();
+  }
+}
+
 export async function applyPendingMigrations(
   pool: Pool,
   logger: Logger,
 ): Promise<void> {
   await ensureWardrobeSchema(pool, logger);
-
-  if (await usersTableExists(pool)) {
-    return;
-  }
 
   const migrationsDir = resolveMigrationsDir();
 
@@ -80,11 +89,24 @@ export async function applyPendingMigrations(
     return;
   }
 
+  const freshDatabase = !(await usersTableExists(pool));
+  const applied = await getAppliedMigrationVersions(pool);
+
+  const pending = freshDatabase
+    ? files
+    : files.filter((file) => !applied.has(file.replace(/\.up\.sql$/, '')));
+
+  if (!pending.length) {
+    return;
+  }
+
   logger.warn(
-    `Table '${POSTGRES_TABLES.USERS}' missing — applying ${files.length} migration(s)`,
+    freshDatabase
+      ? `Fresh database — applying ${pending.length} migration(s)`
+      : `Applying ${pending.length} pending migration(s)`,
   );
 
-  for (const file of files) {
+  for (const file of pending) {
     const sql = readFileSync(join(migrationsDir, file), 'utf8');
     logger.log(`Applying PostgreSQL migration: ${file}`);
     await pool.query(sql);

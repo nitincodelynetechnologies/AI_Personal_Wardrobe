@@ -92,6 +92,7 @@ export async function apiClient(endpoint, options = {}) {
       headers: requestHeaders,
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       signal: controller?.signal,
+      cache: options.cache ?? 'default',
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

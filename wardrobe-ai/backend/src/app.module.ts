@@ -16,6 +16,7 @@ import { ProductsModule } from './products/products.module';
 import { TryOnModule } from './try-on/try-on.module';
 import { VtonModule } from './vton/vton.module';
 import { ChatModule } from './chat/chat.module';
+import { OrdersModule } from './orders/orders.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -38,6 +39,7 @@ import { HealthController } from './health/health.controller';
     ChatModule,
     WardrobeModule,
     OutfitsModule,
+    OrdersModule,
   ],
   controllers: [HealthController],
 })

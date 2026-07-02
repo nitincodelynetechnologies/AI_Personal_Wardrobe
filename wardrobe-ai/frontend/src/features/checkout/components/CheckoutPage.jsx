@@ -180,7 +180,7 @@ export function CheckoutPage() {
           setTimeout(resolve, CHECKOUT_PROCESSING_MS);
         });
 
-        const order = placeOrder({
+        const order = await placeOrder({
           items: orderItems,
           paymentMethod,
           shipping: {

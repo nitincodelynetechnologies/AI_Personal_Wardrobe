@@ -13,6 +13,7 @@ import {
   POSTGRES_PHASE3_TABLES,
   POSTGRES_PHASE4_TABLES,
   POSTGRES_PHASE5_TABLES,
+  POSTGRES_PHASE6_TABLES,
   POSTGRES_TABLES,
 } from './schema.registry';
 
@@ -131,6 +132,7 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
       ...POSTGRES_PHASE3_TABLES,
       ...POSTGRES_PHASE4_TABLES,
       ...POSTGRES_PHASE5_TABLES,
+      ...POSTGRES_PHASE6_TABLES,
     ];
 
     for (const table of requiredTables) {
