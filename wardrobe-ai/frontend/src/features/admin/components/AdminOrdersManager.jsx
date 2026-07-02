@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, Package, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatAdminCurrency, ORDER_STATUS_STYLES } from '@/features/admin/constants/adminMockData';
@@ -11,9 +11,30 @@ import { updateAdminOrderStatus } from '@/features/admin/services/adminService';
 import { getSessionToken } from '@/features/auth/utils/sessionToken';
 import { updateOrderStatus } from '@/features/admin/storage/adminStorage';
 
-function OrderCard({ order, onStatusChange, onGenerateBill }) {
+const ORDER_ID_MIME = 'application/order-id';
+
+function OrderCard({ order, onStatusChange, onGenerateBill, onDragStart, onDragEnd, isDragging }) {
   return (
-    <article className="rounded-xl border border-borderColor bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#0f0818]">
+    <article
+      draggable
+      onDragStart={(event) => {
+        if (event.target.closest('select, button')) {
+          event.preventDefault();
+          return;
+        }
+
+        event.dataTransfer.setData(ORDER_ID_MIME, order.id);
+        event.dataTransfer.effectAllowed = 'move';
+        onDragStart?.(order.id);
+      }}
+      onDragEnd={() => {
+        onDragEnd?.();
+      }}
+      className={cn(
+        'rounded-xl border border-borderColor bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#0f0818]',
+        isDragging ? 'cursor-grabbing opacity-50' : 'cursor-grab',
+      )}
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <span className="font-mono text-xs text-magenta">{order.id}</span>
         <span
@@ -54,15 +75,29 @@ export function AdminOrdersManager() {
   const { orders, refresh, dataSource, error } = useAdminOrders();
   const [view, setView] = useState('kanban');
   const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [optimisticOrders, setOptimisticOrders] = useState(null);
+  const [draggingOrderId, setDraggingOrderId] = useState(null);
+  const [dragOverStatus, setDragOverStatus] = useState(null);
+
+  const displayOrders = optimisticOrders ?? orders;
+
+  useEffect(() => {
+    setOptimisticOrders(null);
+  }, [orders]);
 
   const grouped = useMemo(() => {
     return ORDER_PIPELINE.reduce((acc, status) => {
-      acc[status] = orders.filter((order) => order.status === status);
+      acc[status] = displayOrders.filter((order) => order.status === status);
       return acc;
     }, {});
-  }, [orders]);
+  }, [displayOrders]);
 
   const handleStatusChange = async (orderId, status) => {
+    setOptimisticOrders((current) => {
+      const base = current ?? orders;
+      return base.map((order) => (order.id === orderId ? { ...order, status } : order));
+    });
+
     const token = getSessionToken();
 
     if (token) {
@@ -124,7 +159,33 @@ export function AdminOrdersManager() {
             {ORDER_PIPELINE.map((status) => (
               <div
                 key={status}
-                className="min-w-[220px] rounded-2xl border border-borderColor bg-white/40 p-3 backdrop-blur-md dark:border-white/10 dark:bg-[#150d22]/60"
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  setDragOverStatus(status);
+                }}
+                onDragLeave={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setDragOverStatus((current) => (current === status ? null : current));
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDragOverStatus(null);
+                  setDraggingOrderId(null);
+
+                  const orderId = event.dataTransfer.getData(ORDER_ID_MIME);
+                  if (!orderId) return;
+
+                  const order = displayOrders.find((entry) => entry.id === orderId);
+                  if (!order || order.status === status) return;
+
+                  void handleStatusChange(orderId, status);
+                }}
+                className={cn(
+                  'min-w-[220px] rounded-2xl border border-borderColor bg-white/40 p-3 backdrop-blur-md dark:border-white/10 dark:bg-[#150d22]/60',
+                  dragOverStatus === status && draggingOrderId && 'ring-2 ring-magenta/30',
+                )}
               >
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">
@@ -141,6 +202,12 @@ export function AdminOrdersManager() {
                       order={order}
                       onStatusChange={handleStatusChange}
                       onGenerateBill={handleGenerateBill}
+                      onDragStart={setDraggingOrderId}
+                      onDragEnd={() => {
+                        setDraggingOrderId(null);
+                        setDragOverStatus(null);
+                      }}
+                      isDragging={draggingOrderId === order.id}
                     />
                   ))}
                 </div>
@@ -164,7 +231,7 @@ export function AdminOrdersManager() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => (
+                  {displayOrders.map((order) => (
                     <tr
                       key={order.id}
                       className="border-b border-borderColor/60 dark:border-white/5"

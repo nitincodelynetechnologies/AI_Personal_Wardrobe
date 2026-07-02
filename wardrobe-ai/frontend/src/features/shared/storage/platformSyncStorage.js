@@ -274,7 +274,7 @@ export function readOrdersForEmail(email) {
   const normalizedEmail = (email ?? '').trim().toLowerCase();
   if (!normalizedEmail) return [];
 
-  return readOrders().filter((order) => order.email === normalizedEmail);
+  return readOrdersRaw().filter((order) => order.email === normalizedEmail);
 }
 
 export function readTickets() {

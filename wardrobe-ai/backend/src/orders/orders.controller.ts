@@ -22,6 +22,16 @@ import { CreateCouponDto, UpdateCouponStatusDto } from '../coupons/dto/coupon.dt
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List orders for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'User-scoped order history' })
+  async listMyOrders(@CurrentUser() user: PublicUser) {
+    const orders = await this.ordersService.listOrdersForUser(user.id);
+    return { orders };
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

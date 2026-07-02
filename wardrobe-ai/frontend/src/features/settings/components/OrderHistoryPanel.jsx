@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Package, Printer } from 'lucide-react';
+import { FileText, Loader2, Package, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { OrderInvoiceModal } from '@/features/admin/components/OrderInvoiceModal';
@@ -11,12 +11,8 @@ import {
   formatAdminDate,
   ORDER_STATUS_STYLES,
 } from '@/features/admin/constants/adminMockData';
-import { useUserAccountEmail } from '@/features/shared/hooks/useUserAccountEmail';
-import {
-  markOrderUpdatesReadForEmail,
-  ORDERS_UPDATED,
-  readOrdersForEmail,
-} from '@/features/shared/storage/platformSyncStorage';
+import { useUserOrders } from '@/features/orders/hooks/useUserOrders';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 const BILL_ELIGIBLE_STATUSES = new Set(['Delivered', 'Confirmed']);
 
@@ -24,6 +20,14 @@ function getOrderLineItems(order) {
   if (Array.isArray(order.items) && typeof order.items[0] === 'object') {
     return order.items;
   }
+
+  if (Array.isArray(order.lineItems) && order.lineItems.length > 0) {
+    return order.lineItems.map((item) => ({
+      name: item.name,
+      image_url: item.image_url ?? null,
+    }));
+  }
+
   return (order.products ?? []).map((name) => ({ name, image_url: null }));
 }
 
@@ -56,40 +60,40 @@ function OrderItemThumbnails({ items }) {
 }
 
 export function OrderHistoryPanel({ markReadOnMount = false }) {
-  const email = useUserAccountEmail();
-  const [orders, setOrders] = useState([]);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userEmail = useAuthStore((state) => state.user?.email);
+  const { orders, loading, error, markAllRead } = useUserOrders({
+    enabled: isAuthenticated,
+    poll: true,
+  });
   const [invoiceOrder, setInvoiceOrder] = useState(null);
 
-  const refresh = useCallback(() => {
-    setOrders(readOrdersForEmail(email));
-  }, [email]);
-
   useEffect(() => {
-    refresh();
+    if (!markReadOnMount || orders.length === 0) return;
+    markAllRead();
+  }, [markReadOnMount, markAllRead, orders.length]);
 
-    const onStorage = (event) => {
-      if (event.key === 'vton_orders' || event.key === null) refresh();
-    };
-
-    window.addEventListener(ORDERS_UPDATED, refresh);
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      window.removeEventListener(ORDERS_UPDATED, refresh);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [refresh]);
-
-  useEffect(() => {
-    if (!markReadOnMount || !email) return;
-    markOrderUpdatesReadForEmail(email);
-    refresh();
-  }, [markReadOnMount, email, refresh]);
-
-  if (!email) {
+  if (!isAuthenticated) {
     return (
       <p className="text-sm text-muted-foreground">
-        Sign in with an account email to view synced order history.
+        Sign in to view your order history.
+      </p>
+    );
+  }
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin text-magenta" />
+        Loading your orders…
+      </div>
+    );
+  }
+
+  if (error && orders.length === 0) {
+    return (
+      <p className="text-sm text-destructive">
+        {error}
       </p>
     );
   }
@@ -98,7 +102,9 @@ export function OrderHistoryPanel({ markReadOnMount = false }) {
     return (
       <div className="flex flex-col items-center gap-3 py-10 text-center">
         <Package className="h-10 w-10 text-slate-300 dark:text-slate-600" />
-        <p className="text-sm text-muted-foreground">No orders yet for {email}.</p>
+        <p className="text-sm text-muted-foreground">
+          No orders yet{userEmail ? ` for ${userEmail}` : ''}.
+        </p>
         <Button asChild variant="outline" size="sm">
           <Link href="/catalog">Browse catalog</Link>
         </Button>

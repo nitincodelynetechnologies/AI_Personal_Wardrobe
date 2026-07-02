@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { generateOrderId } from '@/features/checkout/constants/checkoutOptions';
 import { createOrderOnServer } from '@/features/orders/services/orderApiService';
-import { saveCheckoutOrder } from '@/features/shared/storage/platformSyncStorage';
+import { ORDERS_UPDATED } from '@/features/shared/storage/platformSyncStorage';
 
 const initialState = {
   orders: [],
@@ -48,14 +48,14 @@ export const useOrderStore = create(
           });
         }
 
-        if (typeof window !== 'undefined') {
-          saveCheckoutOrder(order);
-        }
-
         set({
           orders: [order, ...get().orders],
           lastOrder: order,
         });
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent(ORDERS_UPDATED));
+        }
 
         return order;
       },

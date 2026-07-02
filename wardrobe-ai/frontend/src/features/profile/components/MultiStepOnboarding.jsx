@@ -43,7 +43,9 @@ function mapValidationErrors(error) {
 export function MultiStepOnboarding() {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const userId = useAuthStore((s) => s.user?.id);
   const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
+  const skipOnboarding = useProfileStore((s) => s.skipOnboarding);
 
   const [step, setStep] = useState(1);
   const [demographics, setDemographics] = useState(INITIAL_DEMOGRAPHICS);
@@ -110,6 +112,11 @@ export function MultiStepOnboarding() {
     }
   }, [accessToken, completeOnboarding, demographics, preferences, router]);
 
+  const handleSkip = useCallback(() => {
+    skipOnboarding(userId);
+    router.push('/dashboard');
+  }, [skipOnboarding, userId, router]);
+
   if (isSubmitting) {
     return <FashionDnaLoader />;
   }
@@ -173,15 +180,35 @@ export function MultiStepOnboarding() {
             )}
 
             {step === 1 ? (
-              <Button onClick={handleNext} className="gap-2 sm:ml-auto">
-                Continue
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:items-end">
+                <Button onClick={handleNext} className="gap-2">
+                  Continue
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className="text-gray-500 hover:bg-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Skip for now
+                </Button>
+              </div>
             ) : (
-              <Button onClick={handleSubmit} className="gap-2 sm:ml-auto">
-                <Sparkles className="h-4 w-4" />
-                Generate My Fashion DNA
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:items-end">
+                <Button onClick={handleSubmit} className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Generate My Fashion DNA
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className="text-gray-500 hover:bg-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Skip for now
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>

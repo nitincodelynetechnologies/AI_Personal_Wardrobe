@@ -7,6 +7,11 @@ import { useCartStore } from '@/features/commerce/store/useCartStore';
 import { useWishlistStore } from '@/features/commerce/store/useWishlistStore';
 import { useOrderStore } from '@/features/checkout/store/useOrderStore';
 import { useDashboardStore } from '@/features/dashboard/store/useDashboardStore';
+import {
+  clearAllOrderReadState,
+  clearOrderReadStateForUser,
+} from '@/features/orders/utils/orderReadState';
+import { ORDERS_KEY, LEGACY_ORDERS_KEY } from '@/features/shared/storage/platformSyncStorage';
 
 const PERSISTED_USER_STORES = [
   useAuthStore,
@@ -29,17 +34,28 @@ export function resetInMemoryUserState() {
   useDashboardStore.getState().resetDashboard();
 }
 
-export async function purgePersistedUserSession() {
+export async function purgePersistedUserSession(userId) {
   await Promise.all(PERSISTED_USER_STORES.map((store) => store.persist.clearStorage()));
 
   if (typeof window !== 'undefined') {
     sessionStorage.clear();
+    clearAllOrderReadState();
+    if (userId) {
+      clearOrderReadStateForUser(userId);
+    }
+    try {
+      localStorage.removeItem(ORDERS_KEY);
+      localStorage.removeItem(LEGACY_ORDERS_KEY);
+    } catch {
+      // Ignore storage errors during sign-out.
+    }
   }
 }
 
 export async function clearUserSession() {
+  const userId = useAuthStore.getState().user?.id;
   resetInMemoryUserState();
-  await purgePersistedUserSession();
+  await purgePersistedUserSession(userId);
 }
 
 function bindSessionAvatar(user) {

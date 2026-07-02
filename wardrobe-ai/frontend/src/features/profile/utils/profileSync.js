@@ -21,21 +21,50 @@ export function isOnboardingComplete(profile, preferences) {
   );
 }
 
+export function hasSkippedOnboardingForUser(userId) {
+  if (!userId) return false;
+
+  if (typeof window !== 'undefined') {
+    if (sessionStorage.getItem(`wardrobe-onboarding-skipped:${userId}`) === '1') {
+      return true;
+    }
+  }
+
+  const { onboardingSkipped, onboardingSkippedForUserId } = useProfileStore.getState();
+  return Boolean(onboardingSkipped && onboardingSkippedForUserId === userId);
+}
+
+export function markOnboardingSkippedForUser(userId) {
+  if (!userId || typeof window === 'undefined') return;
+  sessionStorage.setItem(`wardrobe-onboarding-skipped:${userId}`, '1');
+}
+
+export function clearOnboardingSkippedForUser(userId) {
+  if (!userId || typeof window === 'undefined') return;
+  sessionStorage.removeItem(`wardrobe-onboarding-skipped:${userId}`);
+}
+
 export async function syncProfileFromServer(token) {
-  useProfileStore.getState().resetProfile();
+  const userId = useAuthStore.getState().user?.id;
+  const skippedByCurrentUser = hasSkippedOnboardingForUser(userId);
 
   const response = await getProfile(token);
-  const onboardingComplete = isOnboardingComplete(response.profile, response.preferences);
+  const serverComplete = isOnboardingComplete(response.profile, response.preferences);
 
   useProfileStore.getState().syncFromServer({
     profile: response.profile,
     preferences: response.preferences,
-    onboardingComplete,
+    onboardingComplete: serverComplete || skippedByCurrentUser,
+    onboardingSkipped: skippedByCurrentUser,
+    onboardingSkippedForUserId: skippedByCurrentUser ? userId ?? null : null,
   });
 
   enforceSessionOwnership();
 
-  return { ...response, onboardingComplete };
+  return {
+    ...response,
+    onboardingComplete: serverComplete || skippedByCurrentUser,
+  };
 }
 
 export async function rehydrateAuthStores() {
@@ -48,5 +77,9 @@ export async function rehydrateAuthStores() {
 }
 
 export function getPostLoginPath(onboardingComplete) {
-  return onboardingComplete ? '/dashboard' : '/onboarding';
+  const userId = useAuthStore.getState().user?.id;
+  if (hasSkippedOnboardingForUser(userId) || onboardingComplete) {
+    return '/dashboard';
+  }
+  return '/onboarding';
 }

@@ -14,3 +14,16 @@ export async function createOrderOnServer(payload) {
     cache: 'no-store',
   });
 }
+
+/** Fetches order history for the signed-in user (scoped by JWT user id on the server). */
+export async function fetchUserOrders(token = getSessionToken()) {
+  if (!token) {
+    throw new Error('You must be logged in to view order history.');
+  }
+
+  return apiClient('/orders', {
+    method: 'GET',
+    token,
+    cache: 'no-store',
+  });
+}

@@ -14,6 +14,8 @@ import { CheckoutOrderSummary } from '@/features/checkout/components/CheckoutOrd
 import { OrderSuccess } from '@/features/checkout/components/OrderSuccess';
 import { PaymentMethodSelector } from '@/features/checkout/components/PaymentMethodSelector';
 import { usePremiumGate } from '@/features/auth/hooks/usePremiumGate';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useProfileStore } from '@/features/profile/store/useProfileStore';
 
 const INITIAL_SHIPPING = {
   fullName: '',
@@ -74,6 +76,8 @@ export function CheckoutPage() {
   const placeOrder = useOrderStore((state) => state.placeOrder);
   const lastOrder = useOrderStore((state) => state.lastOrder);
   const clearLastOrder = useOrderStore((state) => state.clearLastOrder);
+  const accountEmail = useAuthStore((state) => state.user?.email);
+  const profileName = useProfileStore((state) => state.profile?.display_name);
 
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [shipping, setShipping] = useState(INITIAL_SHIPPING);
@@ -103,6 +107,14 @@ export function CheckoutPage() {
   useEffect(() => {
     closeCart();
   }, [closeCart]);
+
+  useEffect(() => {
+    setShipping((current) => ({
+      ...current,
+      email: current.email || accountEmail || '',
+      fullName: current.fullName || profileName || '',
+    }));
+  }, [accountEmail, profileName]);
 
   useEffect(() => {
     let cancelled = false;

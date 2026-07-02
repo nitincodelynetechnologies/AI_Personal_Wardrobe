@@ -116,6 +116,23 @@ export class OrdersService {
     return result.rows.map((row) => this.toPlatformOrder(row));
   }
 
+  async listOrdersForUser(userId: string): Promise<PlatformOrder[]> {
+    this.postgresService.assertReady();
+
+    if (!userId?.trim()) {
+      return [];
+    }
+
+    const result = await this.postgresService.query<OrderRecord>(
+      `SELECT * FROM ${POSTGRES_TABLES.ORDERS}
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
+    );
+
+    return result.rows.map((row) => this.toPlatformOrder(row));
+  }
+
   async updateOrderStatus(orderId: string, status: string): Promise<PlatformOrder> {
     this.postgresService.assertReady();
 
