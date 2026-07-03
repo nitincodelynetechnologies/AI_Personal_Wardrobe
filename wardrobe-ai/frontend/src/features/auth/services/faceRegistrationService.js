@@ -13,11 +13,17 @@ export async function registerFace({ captures, userDetails = {}, token }) {
     throw new Error('Front face capture is required');
   }
 
-  const imageBlob = asJpegBlob(await compressFaceImage(frontBlob));
+  const imageFile = await compressFaceImage(frontBlob);
+  const imageBlob = asJpegBlob(imageFile);
+  const filePayload =
+    imageBlob instanceof File
+      ? imageBlob
+      : new File([imageBlob], 'front.jpg', { type: 'image/jpeg' });
+
   const formData = new FormData();
 
   BACKEND_FACE_POSE_FIELDS.forEach((field) => {
-    formData.append(field, imageBlob, `${field}.jpg`);
+    formData.append(field, filePayload, `${field}.jpg`);
   });
 
   if (userDetails.email) {
@@ -40,6 +46,7 @@ export async function registerFace({ captures, userDetails = {}, token }) {
     method: 'POST',
     body: formData,
     token,
+    cache: 'no-store',
   });
 
   return {

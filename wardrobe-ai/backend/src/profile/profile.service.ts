@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 import { POSTGRES_TABLES } from '../database/schema.registry';
 import { PostgresService } from '../database/postgres.service';
 import { FashionDnaService } from '../fashion-dna/fashion-dna.service';
+import { UsersService } from '../users/users.service';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
@@ -19,23 +20,45 @@ export class ProfileService {
   constructor(
     private readonly postgresService: PostgresService,
     private readonly fashionDnaService: FashionDnaService,
+    private readonly usersService: UsersService,
   ) {}
 
   async getCombinedProfile(userId: string): Promise<CombinedProfileResponse> {
-    const [profile, preferences] = await Promise.all([
+    const [user, profile, preferences] = await Promise.all([
+      this.usersService.findById(userId),
       this.findProfileByUserId(userId),
       this.findPreferencesByUserId(userId),
     ]);
 
-    return { profile, preferences };
+    return {
+      name: user.name ?? null,
+      profile,
+      preferences,
+    };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<CombinedProfileResponse> {
     this.ensureDatabaseReady();
-    const existing = await this.findProfileByUserId(userId);
-    const merged = this.mergeProfile(existing, dto);
-    await this.upsertProfile(userId, merged);
-    this.logger.log(`Profile updated for user ${userId}`);
+
+    if (dto.name !== undefined) {
+      await this.usersService.updateUserName(userId, dto.name);
+    }
+
+    const hasProfileFields =
+      dto.gender !== undefined ||
+      dto.age !== undefined ||
+      dto.height !== undefined ||
+      dto.weight !== undefined ||
+      dto.body_type !== undefined ||
+      dto.skin_tone !== undefined;
+
+    if (hasProfileFields) {
+      const existing = await this.findProfileByUserId(userId);
+      const merged = this.mergeProfile(existing, dto);
+      await this.upsertProfile(userId, merged);
+      this.logger.log(`Profile updated for user ${userId}`);
+    }
+
     return this.getCombinedProfile(userId);
   }
 

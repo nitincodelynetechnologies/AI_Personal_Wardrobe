@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { FileText, Loader2, Package, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -67,9 +67,15 @@ export function OrderHistoryPanel({ markReadOnMount = false }) {
     poll: true,
   });
   const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const hasMarkedReadRef = useRef(false);
 
   useEffect(() => {
-    if (!markReadOnMount || orders.length === 0) return;
+    if (!markReadOnMount) {
+      hasMarkedReadRef.current = false;
+      return;
+    }
+    if (orders.length === 0 || hasMarkedReadRef.current) return;
+    hasMarkedReadRef.current = true;
     markAllRead();
   }, [markReadOnMount, markAllRead, orders.length]);
 

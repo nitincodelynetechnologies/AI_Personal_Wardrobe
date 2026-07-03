@@ -188,6 +188,33 @@ export class QdrantService implements OnModuleInit, OnModuleDestroy {
     await this.deleteByUserId(this.getFaceCollectionName(), userId);
   }
 
+  async listFaceVectorPayloads(): Promise<Array<{ pointId: string; payload: FaceVectorPayload }>> {
+    const client = this.getClient();
+    const collectionName = this.getFaceCollectionName();
+    const results: Array<{ pointId: string; payload: FaceVectorPayload }> = [];
+    let offset: string | number | Record<string, unknown> | undefined;
+
+    do {
+      const page = await client.scroll(collectionName, {
+        limit: 100,
+        offset,
+        with_payload: true,
+        with_vector: false,
+      });
+
+      for (const point of page.points) {
+        results.push({
+          pointId: String(point.id),
+          payload: (point.payload ?? {}) as unknown as FaceVectorPayload,
+        });
+      }
+
+      offset = page.next_page_offset ?? undefined;
+    } while (offset);
+
+    return results;
+  }
+
   async upsertFashionDnaVector(
     pointId: string,
     vector: number[],

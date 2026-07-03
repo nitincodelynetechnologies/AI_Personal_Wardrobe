@@ -9,6 +9,7 @@ import { AdminCatalogManager } from '@/features/admin/components/AdminCatalogMan
 import { AdminOrdersManager } from '@/features/admin/components/AdminOrdersManager';
 import { AdminCustomersPanel } from '@/features/admin/components/AdminCustomersPanel';
 import { AdminCouponsManager } from '@/features/admin/components/AdminCouponsManager';
+import { AdminRegisteredUsersPanel } from '@/features/admin/components/AdminRegisteredUsersPanel';
 
 export function AdminPage() {
   const { ready } = useAdminGuard();
@@ -28,6 +29,8 @@ export function AdminPage() {
         return <AdminCatalogManager />;
       case 'orders':
         return <AdminOrdersManager />;
+      case 'users':
+        return <AdminRegisteredUsersPanel />;
       case 'customers':
         return <AdminCustomersPanel />;
       case 'coupons':

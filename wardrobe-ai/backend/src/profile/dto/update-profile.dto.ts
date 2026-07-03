@@ -11,6 +11,12 @@ import {
 } from 'class-validator';
 
 export class UpdateProfileDto {
+  @ApiPropertyOptional({ example: 'Jane Doe', maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+
   @ApiPropertyOptional({ example: 'female', maxLength: 50 })
   @IsOptional()
   @IsString()

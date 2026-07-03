@@ -20,6 +20,7 @@ import {
 } from '@/features/profile/validations/onboardingSchema';
 
 const INITIAL_DEMOGRAPHICS = {
+  name: '',
   gender: '',
   age: '',
   heightCm: 170,

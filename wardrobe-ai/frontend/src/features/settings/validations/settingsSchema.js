@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 export const settingsProfileSchema = z.object({
+  name: z
+    .string()
+    .max(255, 'Name is too long')
+    .optional()
+    .or(z.literal('')),
   gender: z.string().min(1, 'Select your gender'),
   age: z.coerce.number().int().min(13, 'Minimum age is 13').max(120, 'Maximum age is 120'),
   heightCm: z.coerce.number().min(50, 'Enter a valid height').max(250, 'Enter a valid height'),

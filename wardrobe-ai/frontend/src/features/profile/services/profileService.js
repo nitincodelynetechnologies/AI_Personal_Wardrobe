@@ -8,6 +8,7 @@ export async function getProfile(token) {
 export async function updateProfile(demographics, token) {
   const body = {};
 
+  if (demographics.name !== undefined) body.name = demographics.name;
   if (demographics.gender !== undefined) body.gender = demographics.gender;
   if (demographics.age !== undefined) body.age = demographics.age;
   if (demographics.heightCm !== undefined) body.height = demographics.heightCm;
@@ -43,5 +44,6 @@ export async function submitOnboarding({ demographics, preferences, token }) {
     profile: profileResponse.profile,
     preferences: preferencesResponse.preferences,
     fashionDna: preferencesResponse.fashion_dna,
+    name: profileResponse.name ?? null,
   };
 }

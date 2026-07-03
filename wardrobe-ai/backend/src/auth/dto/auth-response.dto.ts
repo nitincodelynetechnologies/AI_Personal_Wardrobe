@@ -10,6 +10,9 @@ export class PublicUserDto {
   @ApiProperty({ nullable: true })
   mobile: string | null;
 
+  @ApiPropertyOptional({ nullable: true, example: 'Jane Doe' })
+  name?: string | null;
+
   @ApiProperty({ example: 'active' })
   status: string;
 

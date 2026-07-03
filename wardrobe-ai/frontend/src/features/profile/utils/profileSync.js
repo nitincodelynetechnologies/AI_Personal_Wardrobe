@@ -3,6 +3,20 @@ import { getProfile } from '@/features/profile/services/profileService';
 import { useProfileStore } from '@/features/profile/store/useProfileStore';
 import { enforceSessionOwnership } from '@/features/auth/utils/sessionLifecycle';
 
+export function mergeProfileWithName(profile, name) {
+  if (!profile && !name) return null;
+  return {
+    ...(profile ?? {}),
+    name: name ?? profile?.name ?? null,
+  };
+}
+
+export function applyServerProfileName(name) {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  useAuthStore.getState().setUser({ ...user, name: name ?? null });
+}
+
 export function isOnboardingComplete(profile, preferences) {
   if (!profile || !preferences) return false;
 
@@ -52,12 +66,14 @@ export async function syncProfileFromServer(token) {
   const serverComplete = isOnboardingComplete(response.profile, response.preferences);
 
   useProfileStore.getState().syncFromServer({
-    profile: response.profile,
+    profile: mergeProfileWithName(response.profile, response.name),
     preferences: response.preferences,
     onboardingComplete: serverComplete || skippedByCurrentUser,
     onboardingSkipped: skippedByCurrentUser,
     onboardingSkippedForUserId: skippedByCurrentUser ? userId ?? null : null,
   });
+
+  applyServerProfileName(response.name);
 
   enforceSessionOwnership();
 

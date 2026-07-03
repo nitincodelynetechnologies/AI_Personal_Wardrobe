@@ -13,6 +13,8 @@ import {
 import { useUserAccountEmail } from '@/features/shared/hooks/useUserAccountEmail';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { fetchUserOrders } from '@/features/orders/services/orderApiService';
+import { fetchMySupportTickets } from '@/features/support/services/supportApiService';
+import { connectSupportSocket } from '@/features/support/services/supportSocket';
 import { getSessionToken } from '@/features/auth/utils/sessionToken';
 import {
   applyOrderReadState,
@@ -46,6 +48,22 @@ export function useSupportNotifications() {
     setUnreadTickets(getUnreadTicketsForEmail(email));
     setTickets(readTicketsForEmail(email));
 
+    const token = getSessionToken();
+    if (token) {
+      try {
+        const supportData = await fetchMySupportTickets(token);
+        const apiTickets = supportData.tickets ?? [];
+        if (apiTickets.length) {
+          setTickets(apiTickets);
+          const unreadApi = apiTickets.filter((ticket) => ticket.userUnread).length;
+          setUnreadTicketCount(unreadApi);
+          setUnreadTickets(apiTickets.filter((ticket) => ticket.userUnread));
+        }
+      } catch {
+        // Keep local ticket fallback above.
+      }
+    }
+
     if (!isAuthenticated || !userId) {
       setUnreadOrderCount(0);
       setUnreadOrders([]);
@@ -53,7 +71,6 @@ export function useSupportNotifications() {
       return;
     }
 
-    const token = getSessionToken();
     if (!token) {
       setUnreadOrderCount(0);
       setUnreadOrders([]);
@@ -82,6 +99,20 @@ export function useSupportNotifications() {
   useEffect(() => {
     void refresh();
 
+    const token = getSessionToken();
+    if (email && token) {
+      void connectSupportSocket({
+        role: 'user',
+        email,
+        token,
+        handlers: {
+          onTicket: () => {
+            void refresh();
+          },
+        },
+      });
+    }
+
     const onStorage = (event) => {
       if (
         event.key === 'vton_tickets' ||
@@ -106,7 +137,7 @@ export function useSupportNotifications() {
       window.removeEventListener('storage', onStorage);
       window.clearInterval(interval);
     };
-  }, [refresh]);
+  }, [email, refresh]);
 
   const unreadCount = useMemo(
     () => unreadTicketCount + unreadOrderCount,
@@ -121,9 +152,13 @@ export function useSupportNotifications() {
 
   const markAllOrderUpdatesRead = useCallback(() => {
     if (!userId) return;
-    markOrdersSeenForUser(userId, orders);
-    void refresh();
-  }, [orders, refresh, userId]);
+    setOrders((current) => {
+      markOrdersSeenForUser(userId, current);
+      return current.map((order) => ({ ...order, userUnreadUpdate: false }));
+    });
+    setUnreadOrders([]);
+    setUnreadOrderCount(0);
+  }, [userId]);
 
   return {
     email,

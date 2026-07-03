@@ -16,8 +16,10 @@ import { ProductsModule } from './products/products.module';
 import { TryOnModule } from './try-on/try-on.module';
 import { VtonModule } from './vton/vton.module';
 import { ChatModule } from './chat/chat.module';
+import { SupportChatModule } from './support-chat/support-chat.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { OrdersModule } from './orders/orders.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -25,6 +27,8 @@ import { HealthController } from './health/health.controller';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
+        join(process.cwd(), '..', '.env'),
+        join(process.cwd(), '.env'),
         join(__dirname, '..', '..', '.env'),
         join(__dirname, '..', '.env'),
       ],
@@ -38,10 +42,12 @@ import { HealthController } from './health/health.controller';
     TryOnModule,
     VtonModule,
     ChatModule,
+    SupportChatModule,
     WardrobeModule,
     OutfitsModule,
     OrdersModule,
     CouponsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
 })

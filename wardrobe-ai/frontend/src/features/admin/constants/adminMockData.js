@@ -2,6 +2,7 @@ export const ADMIN_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'orders', label: 'Orders' },
+  { id: 'users', label: 'Registered Users' },
   { id: 'customers', label: 'Customers' },
   { id: 'coupons', label: 'Coupons' },
 ];

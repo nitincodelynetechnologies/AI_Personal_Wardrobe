@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { FaceRegisterDto } from './dto/face-register.dto';
 import { LoginDto } from './dto/login.dto';
 import { FaceService } from './services/face.service';
+import { FaceStorageService } from './services/face-storage.service';
 import { parseAdminEmailAllowlist, withAdminRole } from './utils/admin-role.util';
 
 export interface FaceImageFiles {
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly postgresService: PostgresService,
     private readonly qdrantService: QdrantService,
     private readonly faceService: FaceService,
+    private readonly faceStorageService: FaceStorageService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -58,6 +60,7 @@ export class AuthService {
         mobile: dto.mobile,
         password: dto.password,
         status: 'active',
+        name: dto.name,
       });
     } catch (error) {
       this.logRegistrationFailure('PostgreSQL user INSERT failed', error);
@@ -83,14 +86,27 @@ export class AuthService {
       );
     }
 
+    let faceImageUrl = dto.avatar_url ?? null;
+
+    try {
+      faceImageUrl = await this.faceStorageService.saveRegistrationFace(
+        user.id,
+        frontBuffer,
+        files.front![0].mimetype || 'image/jpeg',
+      );
+    } catch (error) {
+      this.logRegistrationFailure('Face image storage failed', error);
+    }
+
     try {
       await this.qdrantService.upsertFaceVector(user.id, embedding, {
         user_id: user.id,
         name: dto.name ?? null,
         email: dto.email ?? user.email,
-        avatar_url: dto.avatar_url ?? null,
+        avatar_url: faceImageUrl,
       });
     } catch (error) {
+      await this.faceStorageService.deleteUserFaceFiles(user.id).catch(() => undefined);
       this.logRegistrationFailure('Qdrant face vector UPSERT failed', error);
       throw error;
     }
@@ -115,6 +131,10 @@ export class AuthService {
       throw new BadRequestException('Face image is required');
     }
 
+    this.logger.debug(
+      `Face login image received: ${faceFile.buffer.length} bytes, type=${faceFile.mimetype || 'unknown'}`,
+    );
+
     this.ensureDatabasesReady();
 
     let embedding: number[];
@@ -137,7 +157,9 @@ export class AuthService {
 
     let matches;
     try {
-      matches = await this.qdrantService.searchFaceVectors(embedding, 1);
+      const threshold =
+        this.configService.get<number>('auth.faceLoginSimilarityThreshold') ?? 0.55;
+      matches = await this.qdrantService.searchFaceVectors(embedding, 1, threshold);
     } catch (error) {
       this.logRegistrationFailure('Qdrant face vector SEARCH failed', error);
       throw error;
@@ -196,6 +218,7 @@ export class AuthService {
       id: userRecord.id,
       email: userRecord.email,
       mobile: userRecord.mobile,
+      name: userRecord.name ?? null,
       status: userRecord.status,
       created_at: userRecord.created_at,
     };

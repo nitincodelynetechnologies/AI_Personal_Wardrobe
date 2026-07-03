@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { FaceService } from './services/face.service';
+import { FaceStorageService } from './services/face-storage.service';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { FaceService } from './services/face.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, FaceService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtModule, PassportModule, JwtAuthGuard],
+  providers: [AuthService, FaceService, FaceStorageService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, FaceStorageService, JwtModule, PassportModule, JwtAuthGuard],
 })
 export class AuthModule {}

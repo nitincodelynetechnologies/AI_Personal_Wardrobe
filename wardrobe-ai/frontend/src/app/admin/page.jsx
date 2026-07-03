@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Admin Portal | Wardrobe AI',
   description: 'E-Commerce & AI Analytics Dashboard — inventory, orders, CRM, and coupons.',

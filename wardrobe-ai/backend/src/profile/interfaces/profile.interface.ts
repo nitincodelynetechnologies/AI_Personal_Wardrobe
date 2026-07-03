@@ -23,6 +23,7 @@ export interface UserPreferencesRecord {
 }
 
 export interface CombinedProfileResponse {
+  name: string | null;
   profile: UserProfileRecord | null;
   preferences: UserPreferencesRecord | null;
 }
@@ -35,6 +36,7 @@ export interface UpdatePreferencesInput {
 }
 
 export interface UpdateProfileInput {
+  name?: string;
   gender?: string;
   age?: number;
   height?: number;

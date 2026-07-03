@@ -26,6 +26,10 @@ import {
   updatePreferences,
   updateProfile,
 } from '@/features/profile/services/profileService';
+import {
+  applyServerProfileName,
+  mergeProfileWithName,
+} from '@/features/profile/utils/profileSync';
 import { budgetRangeToSlider } from '@/features/profile/constants/onboardingOptions';
 
 function mapValidationErrors(error) {
@@ -33,8 +37,9 @@ function mapValidationErrors(error) {
   return Object.fromEntries(error.errors.map((item) => [item.path[0], item.message]));
 }
 
-function mapProfileToForm(profile) {
+function mapProfileToForm(profile, name) {
   return {
+    name: name ?? profile?.name ?? '',
     gender: profile?.gender ?? '',
     age: profile?.age ?? '',
     heightCm: profile?.height ?? 170,
@@ -64,7 +69,9 @@ export function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [loadedProfile, setLoadedProfile] = useState(null);
-  const [profileForm, setProfileForm] = useState(mapProfileToForm(cachedProfile));
+  const [profileForm, setProfileForm] = useState(
+    mapProfileToForm(cachedProfile, cachedProfile?.name),
+  );
   const [preferencesForm, setPreferencesForm] = useState(mapPreferencesToForm(cachedPreferences));
   const [profileErrors, setProfileErrors] = useState({});
   const [preferenceErrors, setPreferenceErrors] = useState({});
@@ -107,15 +114,16 @@ export function SettingsPage() {
         const response = await getProfile(accessToken);
         if (cancelled) return;
 
-        setProfile(response.profile);
+        setProfile(mergeProfileWithName(response.profile, response.name));
         setPreferences(response.preferences);
-        setLoadedProfile(response.profile);
-        setProfileForm(mapProfileToForm(response.profile));
+        setLoadedProfile(mergeProfileWithName(response.profile, response.name));
+        setProfileForm(mapProfileToForm(response.profile, response.name));
+        applyServerProfileName(response.name);
         setPreferencesForm(mapPreferencesToForm(response.preferences));
       } catch (error) {
         if (!cancelled) {
           setLoadError(getNetworkErrorMessage(error));
-          setProfileForm(mapProfileToForm(cachedProfile));
+          setProfileForm(mapProfileToForm(cachedProfile, cachedProfile?.name));
           setPreferencesForm(mapPreferencesToForm(cachedPreferences));
         }
       } finally {
@@ -146,6 +154,7 @@ export function SettingsPage() {
         const validated = result.data;
         const response = await updateProfile(
           {
+            name: validated.name,
             gender: validated.gender,
             age: validated.age,
             heightCm: validated.heightCm,
@@ -156,10 +165,12 @@ export function SettingsPage() {
           accessToken,
         );
 
-        setProfile(response.profile);
-        setLoadedProfile(response.profile);
+        const mergedProfile = mergeProfileWithName(response.profile, response.name);
+        setProfile(mergedProfile);
+        setLoadedProfile(mergedProfile);
         setPreferences(response.preferences);
-        setProfileForm(mapProfileToForm(response.profile));
+        setProfileForm(mapProfileToForm(response.profile, response.name));
+        applyServerProfileName(response.name);
         showToast({ message: 'Profile updated successfully!', variant: 'success' });
       } catch (error) {
         showToast({

@@ -42,10 +42,6 @@ export function useUserOrders({ enabled = true, poll = true } = {}) {
       setOrders(apiOrders);
       setError(null);
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent(ORDERS_UPDATED));
-      }
-
       return apiOrders;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load orders';
@@ -89,9 +85,11 @@ export function useUserOrders({ enabled = true, poll = true } = {}) {
 
   const markAllRead = useCallback(() => {
     if (!userId) return;
-    markOrdersSeenForUser(userId, orders);
-    setOrders((current) => current.map((order) => ({ ...order, userUnreadUpdate: false })));
-  }, [orders, userId]);
+    setOrders((current) => {
+      markOrdersSeenForUser(userId, current);
+      return current.map((order) => ({ ...order, userUnreadUpdate: false }));
+    });
+  }, [userId]);
 
   return {
     orders,

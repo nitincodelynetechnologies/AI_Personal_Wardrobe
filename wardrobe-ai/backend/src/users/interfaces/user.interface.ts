@@ -4,6 +4,7 @@ export interface UserRecord {
   id: string;
   email: string | null;
   mobile: string | null;
+  name?: string | null;
   password_hash?: string;
   status: UserStatus;
   created_at: Date;
@@ -14,6 +15,7 @@ export interface PublicUser {
   id: string;
   email: string | null;
   mobile: string | null;
+  name?: string | null;
   status: UserStatus;
   created_at: Date;
   role?: string;
@@ -24,6 +26,7 @@ export interface CreateUserInput {
   mobile?: string;
   password: string;
   status?: UserStatus;
+  name?: string;
 }
 
 export interface FaceVectorPayload {

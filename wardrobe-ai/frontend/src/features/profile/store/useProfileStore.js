@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
+function applyServerProfileName(name) {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  useAuthStore.getState().setUser({ ...user, name: name ?? null });
+}
+
 const initialState = {
   profile: null,
   preferences: null,
@@ -22,14 +28,16 @@ export const useProfileStore = create(
 
       setFashionDna: (fashionDna) => set({ fashionDna }),
 
-      completeOnboarding: ({ profile, preferences, fashionDna }) => {
+      completeOnboarding: ({ profile, preferences, fashionDna, name }) => {
         const userId = useAuthStore.getState().user?.id;
         if (typeof window !== 'undefined' && userId) {
           sessionStorage.removeItem(`wardrobe-onboarding-skipped:${userId}`);
         }
 
+        applyServerProfileName(name);
+
         return set({
-          profile: profile ?? null,
+          profile: profile ? { ...profile, name: name ?? null } : null,
           preferences: preferences ?? null,
           fashionDna: fashionDna ?? null,
           onboardingComplete: true,

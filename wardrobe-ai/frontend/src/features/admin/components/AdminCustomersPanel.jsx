@@ -14,8 +14,16 @@ import {
   ADMIN_TICKETS_UPDATED,
   markAdminTicketRead,
   readSupportTickets,
-  updateTicketReply,
 } from '@/features/admin/storage/adminCrmStorage';
+import { getSessionToken } from '@/features/auth/utils/sessionToken';
+import {
+  fetchAdminSupportTickets,
+  markAdminSupportTicketRead,
+  sendAdminSupportReply,
+} from '@/features/support/services/supportApiService';
+import {
+  connectSupportSocket,
+} from '@/features/support/services/supportSocket';
 import { aggregateCustomersFromOrders } from '@/features/admin/utils/adminCustomerAnalytics';
 import { useAdminOrders } from '@/features/admin/hooks/useAdminOrders';
 import {
@@ -35,6 +43,8 @@ const SEGMENT_STYLES = {
 const TICKET_STATUS_STYLES = {
   Open: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
   Updated: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  'Waiting for Admin':
+    'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 animate-pulse',
   Answered: 'border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400',
 };
 
@@ -50,6 +60,8 @@ function getAdminReplyHistory(ticket) {
 
 function TicketListItem({ ticket, isActive, onSelect }) {
   const isUnread = Boolean(ticket.adminUnread);
+  const needsHuman =
+    ticket.sessionState === 'waiting_for_admin' || ticket.status === 'Waiting for Admin';
 
   return (
     <button
@@ -60,7 +72,7 @@ function TicketListItem({ ticket, isActive, onSelect }) {
         isActive
           ? 'border-l-[3px] border-l-magenta bg-magenta/10 dark:bg-magenta/15'
           : 'border-l-[3px] border-l-transparent hover:bg-slate-50 dark:hover:bg-white/[0.03]',
-        isUnread && !isActive && 'bg-red-500/[0.04]',
+        (isUnread || needsHuman) && !isActive && 'bg-red-500/[0.04]',
       )}
     >
       <div className="flex items-start gap-3">
@@ -88,8 +100,14 @@ function TicketListItem({ ticket, isActive, onSelect }) {
           <p className="mt-0.5 truncate text-xs text-slate-500">{ticket.email}</p>
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="font-mono text-[10px] text-magenta">{ticket.id}</span>
-            {ticket.subject && (
-              <span className="truncate text-[10px] text-slate-400">{ticket.subject}</span>
+            {needsHuman ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
+                Human requested
+              </span>
+            ) : (
+              ticket.subject && (
+                <span className="truncate text-[10px] text-slate-400">{ticket.subject}</span>
+              )
             )}
           </div>
         </div>
@@ -162,7 +180,14 @@ function TicketChatView({ ticket, onReply, onMarkRead }) {
 
   useEffect(() => {
     if (ticket.adminUnread) {
-      markAdminTicketRead(ticket.id);
+      const token = getSessionToken();
+      if (token) {
+        void markAdminSupportTicketRead(ticket.id, token).catch(() => {
+          markAdminTicketRead(ticket.id);
+        });
+      } else {
+        markAdminTicketRead(ticket.id);
+      }
       onMarkRead?.();
     }
   }, [ticket.id, ticket.adminUnread, onMarkRead]);
@@ -179,14 +204,17 @@ function TicketChatView({ ticket, onReply, onMarkRead }) {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = replyDraft.trim();
     if (!text || isSending) return;
 
     setIsSending(true);
-    onReply(ticket.id, text);
-    setReplyDraft('');
-    setIsSending(false);
+    try {
+      await onReply(ticket.id, text);
+      setReplyDraft('');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -264,7 +292,11 @@ function SupportTicketsMasterDetail({ tickets, onReply, onMarkRead }) {
   );
 
   const attentionCount = tickets.filter(
-    (ticket) => ticket.status === 'Open' || ticket.status === 'Updated',
+    (ticket) =>
+      ticket.status === 'Open' ||
+      ticket.status === 'Updated' ||
+      ticket.status === 'Waiting for Admin' ||
+      ticket.sessionState === 'waiting_for_admin',
   ).length;
 
   const handleSelectTicket = (ticketId) => {
@@ -327,8 +359,20 @@ export function AdminCustomersPanel() {
   const [users, setUsers] = useState([]);
   const [tickets, setTickets] = useState([]);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     setUsers(aggregateCustomersFromOrders(orders));
+
+    const token = getSessionToken();
+    if (token) {
+      try {
+        const data = await fetchAdminSupportTickets(token);
+        setTickets(data.tickets ?? []);
+        return;
+      } catch (error) {
+        console.warn('[AdminCustomersPanel] live tickets unavailable, using local cache:', error);
+      }
+    }
+
     setTickets(readSupportTickets());
   }, [orders]);
 
@@ -383,30 +427,62 @@ export function AdminCustomersPanel() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
+
+    const token = getSessionToken();
+    void connectSupportSocket({
+      role: 'admin',
+      token,
+      handlers: {
+        onTicket: () => {
+          void refresh();
+          window.dispatchEvent(new CustomEvent(ADMIN_TICKETS_UPDATED));
+        },
+        onHandoff: () => {
+          void refresh();
+          showToast({
+            message: 'A customer requested human support in live chat.',
+            variant: 'success',
+          });
+          window.dispatchEvent(new CustomEvent(ADMIN_TICKETS_UPDATED));
+        },
+      },
+    });
+
     window.addEventListener(ADMIN_TICKETS_UPDATED, refresh);
     window.addEventListener(ORDERS_UPDATED, refresh);
     window.addEventListener('vton-orders-updated', refresh);
 
     const onStorage = (event) => {
-      if (!event.key || event.key === 'vton_orders') refresh();
+      if (!event.key || event.key === 'vton_orders') void refresh();
     };
     window.addEventListener('storage', onStorage);
-
-    const interval = window.setInterval(refresh, 3000);
 
     return () => {
       window.removeEventListener(ADMIN_TICKETS_UPDATED, refresh);
       window.removeEventListener(ORDERS_UPDATED, refresh);
       window.removeEventListener('vton-orders-updated', refresh);
       window.removeEventListener('storage', onStorage);
-      window.clearInterval(interval);
     };
-  }, [refresh]);
+  }, [refresh, showToast]);
 
-  const handleTicketReply = (ticketId, adminReply) => {
-    updateTicketReply(ticketId, adminReply);
-    refresh();
+  const handleTicketReply = async (ticketId, adminReply) => {
+    const token = getSessionToken();
+
+    try {
+      if (token) {
+        await sendAdminSupportReply(ticketId, adminReply, token);
+      } else {
+        markAdminTicketRead(ticketId);
+      }
+      await refresh();
+      window.dispatchEvent(new CustomEvent(ADMIN_TICKETS_UPDATED));
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : 'Failed to send admin reply',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

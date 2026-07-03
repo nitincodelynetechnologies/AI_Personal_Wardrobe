@@ -9,6 +9,14 @@ import { createHash } from 'crypto';
 
 const VECTOR_SIZE = 512;
 
+function isCloudProductionDeploy(): boolean {
+  return (
+    process.env.RENDER === 'true' ||
+    Boolean(process.env.RENDER_EXTERNAL_URL) ||
+    Boolean(process.env.RAILWAY_ENVIRONMENT)
+  );
+}
+
 interface FaceServiceErrorBody {
   detail?: {
     code?: string;
@@ -29,6 +37,11 @@ export class FaceService {
     const useMock = this.configService.get<boolean>('auth.faceServiceMock') === true;
 
     if (useMock) {
+      if (isCloudProductionDeploy()) {
+        this.logger.warn(
+          'FACE_SERVICE_MOCK is enabled on a cloud deploy. Login frames will not match registration unless the image bytes are identical. Set FACE_SERVICE_MOCK=false and configure FACE_SERVICE_URL.',
+        );
+      }
       this.logger.debug('Using mock face embedding (FACE_SERVICE_MOCK=true)');
       return this.mockEmbedding(imageBuffers);
     }
@@ -65,7 +78,26 @@ export class FaceService {
     buffers: Buffer[],
     mimeType = 'image/jpeg',
   ): Promise<number[]> {
-    const baseUrl = this.configService.get<string>('auth.faceServiceUrl');
+    const baseUrl = this.normalizeFaceServiceBaseUrl(
+      this.configService.get<string>('auth.faceServiceUrl'),
+    );
+
+    if (!baseUrl) {
+      throw new ServiceUnavailableException(
+        'Face verification is not configured. Set FACE_SERVICE_URL to your deployed face-service URL.',
+      );
+    }
+
+    if (isCloudProductionDeploy() && /localhost|127\.0\.0\.1/i.test(baseUrl)) {
+      throw new ServiceUnavailableException(
+        'FACE_SERVICE_URL points to localhost on Render. Set it to your public face-service URL.',
+      );
+    }
+
+    this.logger.debug(
+      `Calling face-service embed (${buffers.reduce((sum, buffer) => sum + buffer.length, 0)} bytes across ${buffers.length} image(s))`,
+    );
+
     const timeoutMs = this.configService.get<number>('auth.faceServiceTimeoutMs') ?? 10000;
     const normalizedMime = mimeType.startsWith('image/') ? mimeType : 'image/jpeg';
     const formData = new FormData();
@@ -146,5 +178,18 @@ export class FaceService {
     }
 
     return data.embedding;
+  }
+
+  private normalizeFaceServiceBaseUrl(rawUrl: string | undefined): string | null {
+    const trimmed = (rawUrl || '').trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed.replace(/\/$/, '');
+    }
+
+    return `https://${trimmed.replace(/\/$/, '')}`;
   }
 }

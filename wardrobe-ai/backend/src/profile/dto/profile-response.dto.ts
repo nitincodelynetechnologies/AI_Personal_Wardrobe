@@ -59,6 +59,9 @@ export class UserPreferencesDto {
 }
 
 export class CombinedProfileResponseDto {
+  @ApiPropertyOptional({ example: 'Jane Doe', maxLength: 255 })
+  name: string | null;
+
   @ApiPropertyOptional({ type: UserProfileDto })
   profile: UserProfileDto | null;
 

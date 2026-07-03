@@ -44,7 +44,7 @@ export async function apiClient(endpoint, options = {}) {
   const { method = 'GET', body, headers = {}, token, timeoutMs } = options;
   const apiBaseUrl = getApiBaseUrl();
 
-  const requestHeaders = { ...headers };
+  const requestHeaders = { Accept: 'application/json', ...headers };
 
   if (token) {
     requestHeaders.Authorization = `Bearer ${token}`;
@@ -69,7 +69,9 @@ export async function apiClient(endpoint, options = {}) {
       headers: requestHeaders,
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       signal: controller?.signal,
-      cache: options.cache ?? (token ? 'no-store' : 'default'),
+      cache: options.cache ?? (token || method !== 'GET' ? 'no-store' : 'default'),
+      credentials: 'include',
+      mode: 'cors',
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {

@@ -6,6 +6,9 @@
 # 2. Create a PostgreSQL database on Render (or use an existing one).
 # 3. Create a Qdrant Cloud cluster and copy URL + API key.
 # 4. Fill env vars marked sync: false in the Render dashboard after first sync.
+# 5. After wardrobe-face deploys, set wardrobe-api → FACE_SERVICE_URL to
+#    https://<wardrobe-face-host> (no trailing slash). Users who registered
+#    while FACE_SERVICE_MOCK=true must re-register face after switching to real embeddings.
 #
 # Use Node runtime (not Docker) — simpler and fixes migration paths automatically.
 
@@ -35,7 +38,13 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FACE_SERVICE_MOCK
-        value: "true"
+        value: "false"
+      - key: FACE_SERVICE_URL
+        sync: false
+      - key: FACE_LOGIN_SIMILARITY_THRESHOLD
+        value: "0.55"
+      - key: QDRANT_SIMILARITY_THRESHOLD
+        value: "0.55"
       - key: ADMIN_EMAILS
         value: patel12@gmail.com,patel@gmail.com
       - key: CLOTHING_SERVICE_MOCK
@@ -62,6 +71,16 @@ services:
         value: https://ai-personal-wardrobe.onrender.com/api
       - key: BACKEND_API_URL
         value: https://ai-personal-wardrobe.onrender.com/api
+
+  - type: web
+    name: wardrobe-face
+    runtime: docker
+    region: singapore
+    plan: free
+    rootDir: wardrobe-ai/ai-services/face-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
 
 databases:
   - name: wardrobe-database

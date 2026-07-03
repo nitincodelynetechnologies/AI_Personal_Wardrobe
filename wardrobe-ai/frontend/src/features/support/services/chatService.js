@@ -8,6 +8,10 @@ import {
   readOrdersForEmail,
 } from '@/features/shared/storage/platformSyncStorage';
 import { readSupportFaqs, SUPPORT_FAQS_KEY } from '@/features/support/constants/supportFaqs';
+import {
+  detectHumanHandoffRequest,
+  HUMAN_HANDOFF_REPLY,
+} from '@/features/support/utils/humanHandoff';
 
 export const SUPPORT_SYSTEM_PROMPT = `You are the smart customer support AI for our fashion store. Use the provided product catalog and order data to answer the user. Be polite, concise, and helpful. If they ask about an order, ask for their email.`;
 
@@ -365,6 +369,11 @@ function simulateThinkingDelay() {
  * @param {ReturnType<typeof loadSupportStoreContext>} storeData
  */
 export async function generateBotResponse(userMessage, storeData) {
+  if (detectHumanHandoffRequest(userMessage)) {
+    await simulateThinkingDelay();
+    return HUMAN_HANDOFF_REPLY;
+  }
+
   const apiKey = process.env.NEXT_PUBLIC_SUPPORT_OPENAI_API_KEY;
 
   const [reply] = await Promise.all([

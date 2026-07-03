@@ -66,3 +66,15 @@ export function updateAdminOrderStatus(orderId, status, token) {
     token,
   });
 }
+
+/** Live registered users with face images — admin only. */
+export function fetchAdminUsers(token) {
+  return adminFetch('/admin/users', { token });
+}
+
+export function deleteAdminUser(userId, token) {
+  return adminFetch(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    token,
+  });
+}

@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Sparkles,
   Tag,
+  UserCog,
   Users,
   Warehouse,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const NAV_ICONS = {
   dashboard: LayoutGrid,
   inventory: Warehouse,
   orders: ShoppingBag,
+  users: UserCog,
   customers: Users,
   coupons: Tag,
 };

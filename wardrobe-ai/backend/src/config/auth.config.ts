@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import { join } from 'path';
 import { resolveServiceUrl } from './resolve-service-url';
 
 export default registerAs('auth', () => ({
@@ -11,11 +12,17 @@ export default registerAs('auth', () => ({
     'localhost',
     '8000',
   ),
-  faceServiceMock: process.env.FACE_SERVICE_MOCK !== 'false',
+  faceServiceMock:
+    process.env.FACE_SERVICE_MOCK === 'true' ||
+    (process.env.FACE_SERVICE_MOCK !== 'false' &&
+      process.env.NODE_ENV !== 'production' &&
+      !process.env.FACE_SERVICE_URL),
   faceServiceTimeoutMs: parseInt(process.env.FACE_SERVICE_TIMEOUT_MS || '10000', 10),
   faceLoginSimilarityThreshold: parseFloat(
     process.env.FACE_LOGIN_SIMILARITY_THRESHOLD || '0.55',
   ),
+  faceUploadDir:
+    process.env.FACE_UPLOAD_DIR || join(process.cwd(), 'uploads', 'faces'),
   bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
   adminEmails: process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || '',
 }));

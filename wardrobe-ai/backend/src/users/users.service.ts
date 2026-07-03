@@ -34,10 +34,16 @@ export class UsersService {
     }
 
     const result = await this.postgresService.query<UserRecord>(
-      `INSERT INTO wardrobe.users (email, mobile, password_hash, status)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, email, mobile, status, created_at`,
-      [input.email ?? null, input.mobile ?? null, passwordHash, input.status ?? 'active'],
+      `INSERT INTO wardrobe.users (email, mobile, password_hash, status, name)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, email, mobile, name, status, created_at`,
+      [
+        input.email ?? null,
+        input.mobile ?? null,
+        passwordHash,
+        input.status ?? 'active',
+        input.name?.trim() || null,
+      ],
     );
 
     return result.rows[0] as PublicUser;
@@ -45,7 +51,7 @@ export class UsersService {
 
   async findById(id: string): Promise<PublicUser> {
     const result = await this.postgresService.query<UserRecord>(
-      `SELECT id, email, mobile, status, created_at
+      `SELECT id, email, mobile, name, status, created_at
        FROM wardrobe.users WHERE id = $1 AND status <> 'deleted'`,
       [id],
     );
@@ -56,7 +62,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<UserRecord | null> {
     const result = await this.postgresService.query<UserRecord>(
-      `SELECT id, email, mobile, password_hash, status, created_at, updated_at
+      `SELECT id, email, mobile, name, password_hash, status, created_at, updated_at
        FROM wardrobe.users WHERE LOWER(email) = LOWER($1) AND status <> 'deleted'`,
       [email],
     );
@@ -70,5 +76,41 @@ export class UsersService {
       [mobile],
     );
     return result.rows[0] ?? null;
+  }
+
+  async listActiveUsers(): Promise<PublicUser[]> {
+    const result = await this.postgresService.query<PublicUser>(
+      `SELECT id, email, mobile, name, status, created_at
+       FROM wardrobe.users
+       WHERE status <> 'deleted'
+       ORDER BY created_at DESC`,
+    );
+    return result.rows;
+  }
+
+  async updateUserName(userId: string, name: string | null): Promise<PublicUser> {
+    const trimmed = name?.trim() || null;
+    const result = await this.postgresService.query<PublicUser>(
+      `UPDATE wardrobe.users
+       SET name = $2, updated_at = NOW()
+       WHERE id = $1 AND status <> 'deleted'
+       RETURNING id, email, mobile, name, status, created_at`,
+      [userId, trimmed],
+    );
+
+    const user = result.rows[0];
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async deleteUserById(id: string): Promise<void> {
+    const result = await this.postgresService.query<{ id: string }>(
+      `DELETE FROM wardrobe.users WHERE id = $1 RETURNING id`,
+      [id],
+    );
+
+    if (!result.rows[0]) {
+      throw new NotFoundException('User not found');
+    }
   }
 }

@@ -28,16 +28,24 @@ export function getFaceLoginErrorMessage(error) {
   }
 
   const status = error instanceof ApiError ? error.status : error.status;
+  const serverMessage =
+    error instanceof ApiError && typeof error.message === 'string'
+      ? error.message.trim()
+      : '';
+
+  if (status === 503 && serverMessage && serverMessage !== 'Service Unavailable') {
+    return serverMessage;
+  }
 
   if (status === 400 || status === 401 || status === 404 || status === 503) {
-    return ERROR_MESSAGES[status] || error.message || ERROR_MESSAGES.default;
+    return ERROR_MESSAGES[status] || serverMessage || ERROR_MESSAGES.default;
   }
 
   if (status === 500) {
-    return ERROR_MESSAGES[503];
+    return serverMessage || ERROR_MESSAGES[503];
   }
 
-  return error.message || ERROR_MESSAGES.default;
+  return serverMessage || error.message || ERROR_MESSAGES.default;
 }
 
 export function AuthErrorFeedback({ error, onRetry, onUseEmail, className }) {

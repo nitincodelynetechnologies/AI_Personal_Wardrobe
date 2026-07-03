@@ -6,17 +6,21 @@ import { cn } from '@/lib/utils';
 import { useAuthUser } from '@/features/auth/hooks/useAuthUser';
 import { useUserAccountEmail } from '@/features/shared/hooks/useUserAccountEmail';
 import { useSupportNotifications } from '@/features/shared/hooks/useSupportNotifications';
-import {
-  appendUserChatMessage,
-  getChatMessagesForEmail,
-  markTicketsReadForEmail,
-  TICKETS_UPDATED,
-  updateTicketReply,
-} from '@/features/shared/storage/platformSyncStorage';
+import { getSessionToken } from '@/features/auth/utils/sessionToken';
 import {
   generateBotResponse,
   loadSupportStoreContext,
 } from '@/features/support/services/chatService';
+import {
+  fetchMySupportTickets,
+  flattenTicketMessages,
+  getActiveSupportTicket,
+  saveSupportBotReply,
+  sendSupportMessage,
+} from '@/features/support/services/supportApiService';
+import {
+  connectSupportSocket,
+} from '@/features/support/services/supportSocket';
 import { useSupportChatStore } from '@/features/support/store/useSupportChatStore';
 
 function formatMessageTime(isoString) {
@@ -44,15 +48,26 @@ function TypingBubble() {
 
 function ChatBubble({ message }) {
   const sender = message.sender ?? message.role ?? 'user';
-  const isAdmin = sender === 'admin';
+  const isSystem = sender === 'system';
+  const isAdminSide = sender === 'admin' || sender === 'bot' || sender === 'system';
   const timestamp = message.timestamp ?? message.at;
 
+  if (isSystem) {
+    return (
+      <div className="flex justify-center px-2">
+        <div className="max-w-[92%] rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+          {message.text}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('flex', isAdmin ? 'justify-start' : 'justify-end')}>
+    <div className={cn('flex', isAdminSide ? 'justify-start' : 'justify-end')}>
       <div
         className={cn(
           'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm',
-          isAdmin
+          isAdminSide
             ? 'rounded-bl-md bg-slate-100 text-slate-800 dark:bg-[#2a1a35] dark:text-slate-100'
             : 'rounded-br-md bg-magenta/15 text-slate-900 dark:bg-magenta/25 dark:text-white',
         )}
@@ -61,10 +76,10 @@ function ChatBubble({ message }) {
         <p
           className={cn(
             'mt-1 text-[10px] uppercase tracking-wider',
-            isAdmin ? 'text-slate-400' : 'text-magenta/70',
+            isAdminSide ? 'text-slate-400' : 'text-magenta/70',
           )}
         >
-          {isAdmin ? 'Support · ' : 'You · '}
+          {sender === 'admin' ? 'Support · ' : sender === 'bot' ? 'AI · ' : 'You · '}
           {formatMessageTime(timestamp)}
         </p>
       </div>
@@ -79,41 +94,62 @@ export function SupportChatWidget() {
   const { refresh: refreshNotifications } = useSupportNotifications();
 
   const [messages, setMessages] = useState([]);
+  const [waitingForAdmin, setWaitingForAdmin] = useState(false);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
-  const refreshMessages = useCallback(() => {
-    setMessages(getChatMessagesForEmail(email));
-  }, [email]);
+  const applyTicketState = useCallback((ticket) => {
+    if (!ticket) return;
+    setMessages(ticket.messages ?? []);
+    setWaitingForAdmin(
+      ticket.sessionState === 'waiting_for_admin' || ticket.status === 'Waiting for Admin',
+    );
+  }, []);
+
+  const refreshFromApi = useCallback(async () => {
+    const token = getSessionToken();
+    if (!token || !email) return;
+
+    try {
+      const data = await fetchMySupportTickets(token);
+      const tickets = data.tickets ?? [];
+      const active = getActiveSupportTicket(tickets);
+      if (active) {
+        applyTicketState(active);
+      } else {
+        setMessages(flattenTicketMessages(tickets));
+      }
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to load support chat');
+    }
+  }, [applyTicketState, email]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !email) return undefined;
 
-    if (email) {
-      markTicketsReadForEmail(email);
-      refreshNotifications();
-    }
+    refreshFromApi();
+    refreshNotifications();
 
-    refreshMessages();
-
-    const onStorage = (event) => {
-      if (event.key === 'vton_tickets' || event.key === null) refreshMessages();
-    };
-
-    window.addEventListener(TICKETS_UPDATED, refreshMessages);
-    window.addEventListener('storage', onStorage);
-
-    const interval = window.setInterval(refreshMessages, 3000);
-
-    return () => {
-      window.removeEventListener(TICKETS_UPDATED, refreshMessages);
-      window.removeEventListener('storage', onStorage);
-      window.clearInterval(interval);
-    };
-  }, [isOpen, email, refreshMessages, refreshNotifications]);
+    const token = getSessionToken();
+    void connectSupportSocket({
+      role: 'user',
+      email,
+      token,
+      handlers: {
+        onTicket: (ticket) => {
+          if ((ticket.email ?? '').toLowerCase() === email.toLowerCase()) {
+            applyTicketState(ticket);
+            refreshNotifications();
+          }
+        },
+      },
+    });
+  }, [isOpen, email, applyTicketState, refreshFromApi, refreshNotifications]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -137,34 +173,40 @@ export function SupportChatWidget() {
 
     setIsSending(true);
     setIsBotTyping(true);
-
-    let ticket = null;
+    setLoadError(null);
 
     try {
-      ticket = appendUserChatMessage({ user: displayName, email, text });
+      const token = getSessionToken();
+      const result = await sendSupportMessage({
+        text,
+        name: displayName,
+        token,
+      });
+
       setDraft('');
-      refreshMessages();
+      applyTicketState(result.ticket);
 
-      const storeData = loadSupportStoreContext(email);
-      const reply = await generateBotResponse(text, storeData);
-
-      if (ticket?.id && reply) {
-        updateTicketReply(ticket.id, reply);
+      if (result.handoff) {
+        setWaitingForAdmin(true);
+        refreshNotifications();
+        return;
       }
 
-      refreshMessages();
+      if (result.pendingAi) {
+        const storeData = loadSupportStoreContext(email);
+        const reply = await generateBotResponse(text, storeData);
+        const botResult = await saveSupportBotReply({
+          ticketId: result.ticket.id,
+          text: reply,
+          token,
+        });
+        applyTicketState(botResult.ticket);
+      }
+
       refreshNotifications();
     } catch (error) {
-      console.error('[SupportChatWidget] bot reply failed:', error);
-
-      if (ticket?.id) {
-        updateTicketReply(
-          ticket.id,
-          'Sorry — I had trouble processing that. Please try again, or ask about orders, catalog items, or virtual try-on.',
-        );
-        refreshMessages();
-        refreshNotifications();
-      }
+      console.error('[SupportChatWidget] send failed:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setIsBotTyping(false);
       setIsSending(false);
@@ -187,10 +229,20 @@ export function SupportChatWidget() {
           </h2>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              <span
+                className={cn(
+                  'absolute inline-flex h-full w-full rounded-full opacity-60',
+                  waitingForAdmin ? 'animate-ping bg-amber-400' : 'animate-ping bg-emerald-400',
+                )}
+              />
+              <span
+                className={cn(
+                  'relative inline-flex h-2 w-2 rounded-full',
+                  waitingForAdmin ? 'bg-amber-500' : 'bg-emerald-500',
+                )}
+              />
             </span>
-            Online
+            {waitingForAdmin ? 'Waiting for Admin…' : 'Online'}
           </p>
         </div>
         <button
@@ -203,17 +255,29 @@ export function SupportChatWidget() {
         </button>
       </header>
 
+      {waitingForAdmin && (
+        <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs font-medium text-amber-800 dark:text-amber-200">
+          Waiting for Admin — a human agent has been notified.
+        </div>
+      )}
+
       <div
         ref={scrollRef}
         className="flex min-h-[280px] max-h-[min(52dvh,420px)] flex-1 flex-col gap-3 overflow-y-auto bg-slate-50/80 px-4 py-4 dark:bg-[#0f0818]/80"
       >
+        {loadError && (
+          <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-300">
+            {loadError}
+          </p>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
               How can we help you today?
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Ask about virtual try-on, orders, or account issues. We typically reply within a few hours.
+              Ask about virtual try-on, orders, or account issues. Type &quot;talk to admin&quot; for human support.
             </p>
           </div>
         ) : (
@@ -245,7 +309,7 @@ export function SupportChatWidget() {
                 }
               }}
               rows={2}
-              placeholder="Type your message…"
+              placeholder={waitingForAdmin ? 'Waiting for admin — you can still send updates…' : 'Type your message…'}
               className="max-h-24 min-h-[44px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-magenta focus:outline-none focus:ring-2 focus:ring-magenta/20 dark:border-white/10 dark:bg-[#0f0818] dark:text-white"
             />
             <button

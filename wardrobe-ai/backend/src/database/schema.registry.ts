@@ -8,6 +8,8 @@ export const POSTGRES_TABLES = {
   PRODUCTS: 'wardrobe.products',
   ORDERS: 'wardrobe.orders',
   COUPONS: 'wardrobe.coupons',
+  SUPPORT_TICKETS: 'wardrobe.support_tickets',
+  SUPPORT_MESSAGES: 'wardrobe.support_messages',
   SCHEMA_MIGRATIONS: 'wardrobe.schema_migrations',
 } as const;
 

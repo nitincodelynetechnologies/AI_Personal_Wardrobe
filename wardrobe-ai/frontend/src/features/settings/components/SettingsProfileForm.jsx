@@ -7,6 +7,19 @@ export function SettingsProfileForm({ data, errors, onChange }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="settings-name">Full Name</Label>
+        <Input
+          id="settings-name"
+          type="text"
+          autoComplete="name"
+          value={data.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          placeholder="Jane Doe"
+        />
+        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="settings-gender">Gender</Label>
         <select
           id="settings-gender"

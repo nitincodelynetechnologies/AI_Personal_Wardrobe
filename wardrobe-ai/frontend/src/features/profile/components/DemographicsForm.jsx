@@ -22,6 +22,19 @@ export function DemographicsForm({ data, errors, onChange }) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
+        <Label htmlFor="full-name">Full Name</Label>
+        <Input
+          id="full-name"
+          type="text"
+          autoComplete="name"
+          value={data.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          placeholder="Jane Doe"
+        />
+        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2">
         <Label>Gender</Label>
         <ToggleGroup
           options={GENDER_OPTIONS}
