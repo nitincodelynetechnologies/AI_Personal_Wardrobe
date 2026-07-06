@@ -9,23 +9,49 @@ import { useSupportChatStore } from '@/features/support/store/useSupportChatStor
 
 const TOAST_DURATION_MS = 5000;
 
-function getTicketSignature(tickets) {
-  return tickets
-    .map((ticket) => `${ticket.id}@${ticket.adminReply ?? ''}`)
-    .sort()
-    .join('||');
+function getLatestStaffMessageKey(ticket) {
+  const messages = ticket.messages ?? [];
+  const staffMessages = messages.filter(
+    (message) =>
+      message.sender === 'admin' ||
+      message.sender === 'bot' ||
+      message.role === 'admin' ||
+      message.role === 'bot',
+  );
+  const latest = staffMessages[staffMessages.length - 1];
+
+  if (latest?.id) {
+    return `${ticket.id}:${latest.id}`;
+  }
+
+  if (latest?.at || latest?.timestamp) {
+    return `${ticket.id}:${latest.at ?? latest.timestamp}`;
+  }
+
+  return `${ticket.id}:${ticket.adminReply ?? ''}`;
 }
 
-function getOrderSignature(orders) {
-  return orders
-    .map((order) => `${order.id}@${order.status}`)
-    .sort()
-    .join('||');
+function getUnreadTicketKeys(tickets = []) {
+  return tickets.map(getLatestStaffMessageKey);
+}
+
+function getOrderNotificationKey(order) {
+  return `${order.id}@${order.status}`;
+}
+
+function getUnreadOrderKeys(orders = []) {
+  return orders.map(getOrderNotificationKey);
 }
 
 export function SupportNotificationToast() {
-  const { unreadTicketCount, unreadOrderCount, unreadTickets, unreadOrders } =
-    useSupportNotifications();
+  const {
+    unreadTicketCount,
+    unreadOrderCount,
+    unreadTickets,
+    unreadOrders,
+    markAllRead,
+    markAllOrderUpdatesRead,
+  } = useSupportNotifications();
   const isChatOpen = useSupportChatStore((state) => state.isOpen);
   const isOrderHistoryOpen = useOrderHistoryStore((state) => state.isOpen);
   const openChat = useSupportChatStore((state) => state.openChat);
@@ -33,10 +59,14 @@ export function SupportNotificationToast() {
 
   const [toast, setToast] = useState(null);
   const [isExiting, setIsExiting] = useState(false);
-  const prevTicketSigRef = useRef('');
-  const prevOrderSigRef = useRef('');
   const initializedRef = useRef(false);
   const hideTimerRef = useRef(null);
+  const notifiedTicketKeysRef = useRef(new Set());
+  const notifiedOrderKeysRef = useRef(new Set());
+  const suppressedTicketKeysRef = useRef(new Set());
+  const suppressedOrderKeysRef = useRef(new Set());
+  const prevChatOpenRef = useRef(false);
+  const prevOrderHistoryOpenRef = useRef(false);
 
   const dismiss = useCallback(() => {
     setIsExiting(true);
@@ -46,6 +76,20 @@ export function SupportNotificationToast() {
     }, 280);
   }, []);
 
+  const acknowledgeTicketKeys = useCallback((keys) => {
+    keys.forEach((key) => {
+      notifiedTicketKeysRef.current.add(key);
+      suppressedTicketKeysRef.current.add(key);
+    });
+  }, []);
+
+  const acknowledgeOrderKeys = useCallback((keys) => {
+    keys.forEach((key) => {
+      notifiedOrderKeysRef.current.add(key);
+      suppressedOrderKeysRef.current.add(key);
+    });
+  }, []);
+
   const showToast = useCallback(
     (payload) => {
       setToast(payload);
@@ -53,6 +97,16 @@ export function SupportNotificationToast() {
 
       if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
       hideTimerRef.current = window.setTimeout(() => {
+        if (payload.notificationKey) {
+          if (payload.type === 'support') {
+            notifiedTicketKeysRef.current.add(payload.notificationKey);
+            suppressedTicketKeysRef.current.add(payload.notificationKey);
+          }
+          if (payload.type === 'order') {
+            notifiedOrderKeysRef.current.add(payload.notificationKey);
+            suppressedOrderKeysRef.current.add(payload.notificationKey);
+          }
+        }
         dismiss();
         hideTimerRef.current = null;
       }, TOAST_DURATION_MS);
@@ -60,36 +114,112 @@ export function SupportNotificationToast() {
     [dismiss],
   );
 
+  const dismissSupportToast = useCallback(() => {
+    acknowledgeTicketKeys(getUnreadTicketKeys(unreadTickets));
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+    dismiss();
+  }, [acknowledgeTicketKeys, dismiss, unreadTickets]);
+
+  const dismissOrderToast = useCallback(() => {
+    acknowledgeOrderKeys(getUnreadOrderKeys(unreadOrders));
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+    dismiss();
+  }, [acknowledgeOrderKeys, dismiss, unreadOrders]);
+
   useEffect(() => {
-    const ticketSignature = getTicketSignature(unreadTickets);
-    const orderSignature = getOrderSignature(unreadOrders);
+    const justOpened = isChatOpen && !prevChatOpenRef.current;
+    prevChatOpenRef.current = isChatOpen;
+
+    if (!justOpened || unreadTicketCount === 0) return;
+
+    acknowledgeTicketKeys(getUnreadTicketKeys(unreadTickets));
+    markAllRead();
+
+    if (toast?.type === 'support') {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      dismiss();
+    }
+  }, [
+    isChatOpen,
+    unreadTicketCount,
+    unreadTickets,
+    acknowledgeTicketKeys,
+    markAllRead,
+    toast?.type,
+    dismiss,
+  ]);
+
+  useEffect(() => {
+    const justOpened = isOrderHistoryOpen && !prevOrderHistoryOpenRef.current;
+    prevOrderHistoryOpenRef.current = isOrderHistoryOpen;
+
+    if (!justOpened || unreadOrderCount === 0) return;
+
+    acknowledgeOrderKeys(getUnreadOrderKeys(unreadOrders));
+    markAllOrderUpdatesRead();
+
+    if (toast?.type === 'order') {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      dismiss();
+    }
+  }, [
+    isOrderHistoryOpen,
+    unreadOrderCount,
+    unreadOrders,
+    acknowledgeOrderKeys,
+    markAllOrderUpdatesRead,
+    toast?.type,
+    dismiss,
+  ]);
+
+  useEffect(() => {
+    const ticketKeys = getUnreadTicketKeys(unreadTickets);
+    const orderKeys = getUnreadOrderKeys(unreadOrders);
 
     if (!initializedRef.current) {
       initializedRef.current = true;
-      prevTicketSigRef.current = ticketSignature;
-      prevOrderSigRef.current = orderSignature;
+      ticketKeys.forEach((key) => notifiedTicketKeysRef.current.add(key));
+      orderKeys.forEach((key) => notifiedOrderKeysRef.current.add(key));
       return;
     }
 
-    const hasNewOrder =
+    if (isOrderHistoryOpen) {
+      orderKeys.forEach((key) => notifiedOrderKeysRef.current.add(key));
+    }
+
+    if (isChatOpen) {
+      ticketKeys.forEach((key) => notifiedTicketKeysRef.current.add(key));
+    }
+
+    const pendingOrderKey = orderKeys.find(
+      (key) =>
+        !notifiedOrderKeysRef.current.has(key) &&
+        !suppressedOrderKeysRef.current.has(key),
+    );
+
+    if (
+      pendingOrderKey &&
       unreadOrderCount > 0 &&
-      orderSignature !== prevOrderSigRef.current &&
-      orderSignature.length > 0 &&
-      !isOrderHistoryOpen;
-
-    const hasNewTicket =
-      unreadTicketCount > 0 &&
-      ticketSignature !== prevTicketSigRef.current &&
-      ticketSignature.length > 0 &&
-      !isChatOpen;
-
-    prevTicketSigRef.current = ticketSignature;
-    prevOrderSigRef.current = orderSignature;
-
-    if (hasNewOrder && unreadOrders[0]) {
+      !isOrderHistoryOpen &&
+      unreadOrders[0]
+    ) {
+      notifiedOrderKeysRef.current.add(pendingOrderKey);
       const order = unreadOrders[0];
       showToast({
         type: 'order',
+        notificationKey: pendingOrderKey,
         title: 'Order Update',
         message: `Your order ${order.id} is now ${order.status}!`,
         action: () => openOrderHistory(),
@@ -97,9 +227,17 @@ export function SupportNotificationToast() {
       return;
     }
 
-    if (hasNewTicket) {
+    const pendingTicketKey = ticketKeys.find(
+      (key) =>
+        !notifiedTicketKeysRef.current.has(key) &&
+        !suppressedTicketKeysRef.current.has(key),
+    );
+
+    if (pendingTicketKey && unreadTicketCount > 0 && !isChatOpen) {
+      notifiedTicketKeysRef.current.add(pendingTicketKey);
       showToast({
         type: 'support',
+        notificationKey: pendingTicketKey,
         title: 'Support Team',
         message: 'You have a new message!',
         action: () => openChat(),
@@ -133,7 +271,24 @@ export function SupportNotificationToast() {
       : 'bg-magenta/15 text-magenta';
   const actionLabel = toast.type === 'order' ? 'Tap to view orders' : 'Tap to open chat';
 
+  const handleDismiss = (event) => {
+    event.stopPropagation();
+    if (toast.type === 'order') {
+      dismissOrderToast();
+      return;
+    }
+    dismissSupportToast();
+  };
+
   const handleAction = () => {
+    if (toast.type === 'order') {
+      acknowledgeOrderKeys(getUnreadOrderKeys(unreadOrders));
+      markAllOrderUpdatesRead();
+    } else {
+      acknowledgeTicketKeys(getUnreadTicketKeys(unreadTickets));
+      markAllRead();
+    }
+
     if (hideTimerRef.current) {
       window.clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
@@ -167,15 +322,12 @@ export function SupportNotificationToast() {
         <span
           role="button"
           tabIndex={0}
-          onClick={(event) => {
-            event.stopPropagation();
-            dismiss();
-          }}
+          onClick={handleDismiss}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               event.stopPropagation();
-              dismiss();
+              handleDismiss(event);
             }
           }}
           className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
